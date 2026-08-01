@@ -1,0 +1,37 @@
+<%- include('partials/head', { title: 'Join - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="marquee">
+    <p class="marquee__eyebrow">You are invited to</p>
+    <h1 class="marquee__title">
+      <span>Holy</span><span>Hinder Hole</span><span>Sound Society</span>
+    </h1>
+    <p class="marquee__sub"><%= league.name %></p>
+  </header>
+
+  <main class="panel">
+
+    <% if (error) { %><p class="notice notice--bad"><%= error %></p><% } %>
+
+    <form class="strip strip--form" method="post" action="/join/<%= league.invite_code %>">
+      <label class="field">
+        <span class="field__label">Name the group will see</span>
+        <input class="field__input" type="text" name="name"
+               value="<%= values.name || '' %>" autocomplete="name" required autofocus>
+      </label>
+      <label class="field">
+        <span class="field__label">Email</span>
+        <input class="field__input" type="email" name="email"
+               value="<%= values.email || '' %>" autocomplete="email"
+               inputmode="email" required>
+      </label>
+      <button class="button" type="submit">Join the league</button>
+    </form>
+
+    <p class="fineprint">
+      Your email is only ever used to sign you in. Nobody else in the league
+      can see it. There is no password to make or forget.
+    </p>
+
+  </main>
+
+<%- include('partials/foot') %>

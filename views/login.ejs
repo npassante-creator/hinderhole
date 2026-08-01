@@ -1,0 +1,40 @@
+<%- include('partials/head', { title: 'Sign in - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="marquee">
+    <p class="marquee__eyebrow">Selections A1 through J10</p>
+    <h1 class="marquee__title">
+      <span>Holy</span>
+      <span>Hinder Hole</span>
+      <span>Sound Society</span>
+    </h1>
+    <p class="marquee__sub">Autumn 2026</p>
+  </header>
+
+  <main class="panel">
+    <% if (error) { %>
+      <p class="notice notice--bad"><%= error %></p>
+    <% } %>
+
+    <form class="strip strip--form" method="post" action="/auth/request">
+      <label class="field">
+        <span class="field__label">Your email</span>
+        <input
+          class="field__input"
+          type="email"
+          name="email"
+          autocomplete="email"
+          inputmode="email"
+          placeholder="you@example.com"
+          required
+          autofocus>
+      </label>
+      <button class="button" type="submit">Send me a link</button>
+    </form>
+
+    <p class="fineprint">
+      No password. We email you a link that signs you in for the season.
+      Only players already on the roster can get one.
+    </p>
+  </main>
+
+<%- include('partials/foot') %>

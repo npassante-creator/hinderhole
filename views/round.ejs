@@ -1,0 +1,206 @@
+<%- include('partials/head', { title: round.title + ' - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">All rounds</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow">Round <%= String(round.round_number).padStart(2, '0') %></p>
+    <h1 class="marquee__title"><span><%= round.title %></span></h1>
+    <% if (round.description) { %>
+      <p class="marquee__sub"><%= round.description %></p>
+    <% } %>
+  </header>
+
+  <main class="panel">
+
+    <% if (error) { %>
+      <p class="notice notice--bad"><%= error %></p>
+    <% } %>
+    <% if (notice) { %>
+      <p class="notice notice--good"><%= notice %></p>
+    <% } %>
+
+    <dl class="facts">
+      <div class="facts__row">
+        <dt>Songs due</dt>
+        <dd><%= submitBy || 'To be announced' %></dd>
+      </div>
+      <div class="facts__row">
+        <dt>Votes due</dt>
+        <dd><%= voteBy || 'To be announced' %></dd>
+      </div>
+      <div class="facts__row">
+        <dt>In so far</dt>
+        <dd><%= counts.submitted %> of <%= counts.roster %></dd>
+      </div>
+    </dl>
+
+    <% if (round.status === 'draft') { %>
+
+      <div class="strip strip--message">
+        <p>This round has not opened yet. Come back when it does.</p>
+      </div>
+
+    <% } else if (round.status !== 'submitting') { %>
+
+      <div class="strip strip--message">
+        <% if (round.status === 'voting') { %>
+          <p>Voting is open. <a href="/round/<%= round.id %>/vote">Go to the ballot</a>.</p>
+        <% } else if (round.status === 'revealed') { %>
+          <p>This round is done. <a href="/round/<%= round.id %>/results">See the results</a>.</p>
+        <% } else { %>
+          <p>Submissions are closed for this round.</p>
+        <% } %>
+      </div>
+
+    <% } else { %>
+
+      <% if (pastDeadline) { %>
+        <p class="notice notice--warn">
+          The deadline has passed. Anything you submit now is marked late,
+          which means you cannot vote this round unless the commissioner
+          grants you an extension.
+        </p>
+      <% } %>
+
+      <% if (submission) { %>
+
+        <h2 class="rack__heading">Your pick</h2>
+
+        <%- include('partials/player', { sub: submission }) %>
+
+        <div class="pick">
+          <% if (submission.thumbnail_url) { %>
+            <img class="pick__art" src="<%= submission.thumbnail_url %>" alt="" loading="lazy">
+          <% } %>
+          <div class="pick__body">
+            <h3 class="pick__title"><%= submission.title %></h3>
+            <p class="pick__artist"><%= submission.artist || 'Unknown artist' %></p>
+            <p class="pick__source">
+              <span class="tag tag--<%= submission.source %>"><%= submission.source %></span>
+              <a href="<%= submission.source_url %>" target="_blank" rel="noopener">Open link</a>
+              <% if (submission.is_late) { %><span class="tag tag--late">late</span><% } %>
+            </p>
+          </div>
+        </div>
+
+        <form class="strip strip--form" method="post" action="/round/<%= round.id %>/details">
+          <p class="form__hint">
+            The title and artist are read off the link and are often wrong.
+            Fix them here.
+          </p>
+          <label class="field">
+            <span class="field__label">Song title</span>
+            <input class="field__input" type="text" name="title"
+                   value="<%= submission.title || '' %>" required>
+          </label>
+          <label class="field">
+            <span class="field__label">Artist</span>
+            <input class="field__input" type="text" name="artist"
+                   value="<%= submission.artist || '' %>">
+          </label>
+          <label class="field">
+            <span class="field__label">Why this one (shown at the reveal)</span>
+            <textarea class="field__input field__input--area" name="note" rows="2"><%= submission.note || '' %></textarea>
+          </label>
+          <button class="button" type="submit">Save details</button>
+        </form>
+
+        <details class="drawer">
+          <summary class="drawer__summary">Change or remove this pick</summary>
+          <form class="strip strip--form" method="post" action="/round/<%= round.id %>/submit">
+            <label class="field">
+              <span class="field__label">New link</span>
+              <input class="field__input" type="url" name="url"
+                     placeholder="https://youtu.be/..." required>
+            </label>
+            <button class="button" type="submit">Replace song</button>
+          </form>
+          <form class="strip strip--form" method="post"
+                action="/round/<%= round.id %>/upload"
+                enctype="multipart/form-data">
+            <label class="field">
+              <span class="field__label">Or upload a file instead (up to 25 MB)</span>
+              <input class="field__input field__input--file" type="file"
+                     name="audio" accept="audio/*" required>
+            </label>
+            <label class="field">
+              <span class="field__label">Song title</span>
+              <input class="field__input" type="text" name="title">
+            </label>
+            <label class="field">
+              <span class="field__label">Artist</span>
+              <input class="field__input" type="text" name="artist">
+            </label>
+            <button class="button" type="submit">Upload song</button>
+          </form>
+
+          <form method="post" action="/round/<%= round.id %>/withdraw"
+                onsubmit="return confirm('Remove your pick for this round?')">
+            <button class="button button--quiet" type="submit">Remove my pick</button>
+          </form>
+        </details>
+
+      <% } else { %>
+
+        <h2 class="rack__heading">Submit a song</h2>
+
+        <form class="strip strip--form" method="post" action="/round/<%= round.id %>/submit">
+          <label class="field">
+            <span class="field__label">YouTube or Spotify link</span>
+            <input class="field__input" type="url" name="url"
+                   placeholder="https://youtu.be/..." required autofocus>
+          </label>
+          <label class="field">
+            <span class="field__label">Why this one (optional, shown at the reveal)</span>
+            <textarea class="field__input field__input--area" name="note" rows="2"></textarea>
+          </label>
+          <button class="button" type="submit">Submit song</button>
+        </form>
+
+        <details class="drawer">
+          <summary class="drawer__summary">Or upload an audio file</summary>
+          <form class="strip strip--form" method="post"
+                action="/round/<%= round.id %>/upload"
+                enctype="multipart/form-data">
+            <label class="field">
+              <span class="field__label">Audio file (mp3, m4a, wav, flac, ogg &middot; up to 25 MB)</span>
+              <input class="field__input field__input--file" type="file"
+                     name="audio" accept="audio/*" required>
+            </label>
+            <label class="field">
+              <span class="field__label">Song title</span>
+              <input class="field__input" type="text" name="title"
+                     placeholder="Leave blank to use the file name">
+            </label>
+            <label class="field">
+              <span class="field__label">Artist</span>
+              <input class="field__input" type="text" name="artist">
+            </label>
+            <label class="field">
+              <span class="field__label">Why this one (optional)</span>
+              <textarea class="field__input field__input--area" name="note" rows="2"></textarea>
+            </label>
+            <button class="button" type="submit">Upload song</button>
+          </form>
+          <p class="fineprint">
+            For your own recordings, or anything that is not on YouTube.
+            Uploads play inline and keep the round moving, since the player
+            knows when they end.
+          </p>
+        </details>
+
+        <p class="fineprint">
+          Nobody sees your pick, or that you have picked, until voting opens.
+          You can swap it out as many times as you like before the deadline.
+        </p>
+
+      <% } %>
+
+    <% } %>
+
+  </main>
+
+<%- include('partials/foot') %>

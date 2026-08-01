@@ -1,0 +1,15 @@
+<%- include('partials/head', { title: headline }) %>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow"><%= code %></p>
+    <h1 class="marquee__title"><span><%= headline %></span></h1>
+  </header>
+
+  <main class="panel">
+    <div class="strip strip--message">
+      <p><%= detail %></p>
+    </div>
+    <p class="fineprint"><a href="/">Back to the rack</a></p>
+  </main>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,99 @@
+<%- include('partials/head', { title: 'Vote - ' + round.title }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">All rounds</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow">Round <%= String(round.round_number).padStart(2, '0') %> &middot; voting</p>
+    <h1 class="marquee__title"><span><%= round.title %></span></h1>
+  </header>
+
+  <main class="panel">
+
+    <% if (!eligible) { %>
+      <p class="notice notice--warn">
+        You can listen, but you cannot vote this round. Songs were due before
+        yours arrived. Ask the commissioner for an extension if that seems
+        wrong.
+      </p>
+    <% } %>
+
+    <div class="tally" id="tally"
+         data-budget="<%= budget %>"
+         data-spent="<%= spent %>"
+         data-round="<%= round.id %>">
+      <div class="tally__meter">
+        <span class="tally__fill" style="width: <%= Math.round(spent / budget * 100) %>%"></span>
+      </div>
+      <p class="tally__line">
+        <strong class="tally__spent"><%= spent %></strong> of <%= budget %> points spent
+        <span class="tally__state"></span>
+      </p>
+      <p class="tally__due">Votes due <%= voteBy %></p>
+    </div>
+
+    <div class="queuebar">
+      <button class="queuebar__toggle" type="button">Play all</button>
+      <span class="queuebar__status"></span>
+    </div>
+
+    <ol class="ballot">
+      <% songs.forEach(function (s, i) { %>
+        <li class="card <%= s.is_mine ? 'card--mine' : '' %>" data-submission="<%= s.id %>">
+
+          <p class="card__index"><%= String(i + 1).padStart(2, '0') %></p>
+
+          <%- include('partials/player', { sub: s }) %>
+
+          <div class="card__head">
+            <h2 class="card__title"><%= s.title %></h2>
+            <p class="card__artist"><%= s.artist || 'Unknown artist' %></p>
+          </div>
+
+          <% if (s.is_mine) { %>
+            <p class="card__mine">Your song. You cannot vote for it.</p>
+          <% } else if (eligible) { %>
+
+            <div class="dial" role="group" aria-label="Points for <%= s.title %>">
+              <% for (var n = 0; n <= maxPerSong; n++) { %>
+                <button class="dial__pip <%= Number(s.my_points) === n ? 'is-on' : '' %>"
+                        type="button" data-points="<%= n %>"
+                        aria-pressed="<%= Number(s.my_points) === n %>"><%= n %></button>
+              <% } %>
+            </div>
+
+            <details class="say" <%= s.my_comment ? 'open' : '' %>>
+              <summary class="say__summary">
+                <%= s.my_comment ? 'Your comment' : 'Say something' %>
+              </summary>
+              <textarea class="say__box" rows="2"
+                        placeholder="Shown anonymously when the round is revealed"><%= s.my_comment || '' %></textarea>
+              <p class="say__state"></p>
+            </details>
+
+          <% } else { %>
+            <p class="card__mine">Voting is closed to you this round.</p>
+          <% } %>
+
+        </li>
+      <% }) %>
+    </ol>
+
+    <p class="moves">
+      <a class="chip" href="/round/<%= round.id %>/youtube" target="_blank" rel="noopener">YouTube playlist</a>
+      <a class="chip" href="/round/<%= round.id %>/export.txt">Text list</a>
+    </p>
+
+    <p class="fineprint">
+      Points save the moment you tap them. Nothing to submit. You can change
+      your mind until <%= voteBy %>. Nobody sees who submitted what, or who
+      voted for what, until the round is revealed.
+    </p>
+
+  </main>
+
+<script src="/ballot.js?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : '1' %>" defer></script>
+
+<%- include('partials/foot') %>

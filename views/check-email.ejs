@@ -1,0 +1,22 @@
+<%- include('partials/head', { title: 'Check your email' }) %>
+
+  <header class="marquee marquee--small">
+    <h1 class="marquee__title"><span>Check your email</span></h1>
+  </header>
+
+  <main class="panel">
+    <div class="strip strip--message">
+      <p>
+        If <strong><%= email %></strong> is on the roster, a sign in link is
+        on its way. It works once and expires in 20 minutes.
+      </p>
+    </div>
+
+    <p class="fineprint">
+      Nothing after a few minutes? Check spam, then
+      <a href="/login">try again</a>. If it still does not arrive, the address
+      may not be on the roster yet.
+    </p>
+  </main>
+
+<%- include('partials/foot') %>

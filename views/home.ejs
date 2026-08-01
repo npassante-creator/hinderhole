@@ -1,0 +1,62 @@
+<%- include('partials/head', { title: 'Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/standings">Standings</a>
+    <span class="bar__name"><%= player.name %></span>
+    <% if (typeof isAdmin !== "undefined" && isAdmin) { %><a class="bar__admin" href="/admin">Commissioner</a><% } %>
+    <form method="post" action="/auth/logout">
+      <button class="bar__out" type="submit">Sign out</button>
+    </form>
+  </header>
+
+  <% if (!league) { %>
+    <main class="panel">
+      <div class="strip strip--message">
+        <p>You are signed in, but not in a league yet.</p>
+      </div>
+    </main>
+  <% } else { %>
+
+    <header class="marquee marquee--small">
+      <p class="marquee__eyebrow"><%= league.name %></p>
+      <h1 class="marquee__title"><span>Holy Hinder Hole</span><span>Sound Society</span></h1>
+    </header>
+
+    <% if (current) { %>
+      <section class="now">
+        <p class="now__label">
+          <%= current.status === 'submitting' ? 'Now taking songs' : 'Now voting' %>
+        </p>
+        <h2 class="now__title"><%= current.title %></h2>
+        <p class="now__due">
+          <%= current.status === 'submitting' ? 'Songs due' : 'Votes due' %>
+          <%= current.status === 'submitting' ? current.submitBy : current.voteBy %>
+          <% if (current.daysLeft) { %>
+            <span class="now__count"><%= current.daysLeft %> day<%= current.daysLeft === 1 ? '' : 's' %> left</span>
+          <% } %>
+        </p>
+      </section>
+    <% } %>
+
+    <main class="panel">
+      <h2 class="rack__heading">The season</h2>
+      <ol class="rack">
+        <% rounds.forEach(function (r) { %>
+          <li class="strip strip--round strip--<%= r.status %> <%= r.status === 'draft' ? '' : 'strip--link' %>">
+            <% if (r.status !== 'draft') { %><a class="strip__hit" href="/round/<%= r.id %><%= r.status === 'voting' ? '/vote' : (r.status === 'revealed' ? '/results' : '') %>"></a><% } %>
+            <span class="strip__code"><%= String(r.round_number).padStart(2, '0') %></span>
+            <div class="strip__body">
+              <h3 class="strip__title"><%= r.title %></h3>
+              <p class="strip__meta">
+                Songs <%= r.submitBy %> &middot; Votes <%= r.voteBy %>
+              </p>
+            </div>
+            <span class="strip__state"><%= r.stateLabel %></span>
+          </li>
+        <% }) %>
+      </ol>
+    </main>
+
+  <% } %>
+
+<%- include('partials/foot') %>

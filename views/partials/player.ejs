@@ -1,0 +1,42 @@
+<%
+  /* Expects `sub`: a submissions row. Renders a click-to-load player.
+     Nothing is fetched from YouTube or Spotify until the listener taps.
+     data-video carries the YouTube id so player.js can drive it through
+     the IFrame API and know when the song ends. */
+  var embed = null;
+  if (sub.source === 'youtube' && sub.external_id) {
+    embed = 'https://www.youtube-nocookie.com/embed/' + sub.external_id;
+  } else if (sub.source === 'spotify' && sub.external_id) {
+    embed = 'https://open.spotify.com/embed/track/' + sub.external_id;
+  }
+%>
+<div class="player"
+     data-embed="<%= embed || '' %>"
+     data-source="<%= sub.source %>"
+     data-video="<%= sub.source === 'youtube' ? (sub.external_id || '') : '' %>">
+  <% if (sub.source === 'upload') { %>
+    <div class="player__plate">
+      <span class="player__spindle" aria-hidden="true"></span>
+      <audio class="player__audio" controls preload="none" src="<%= sub.source_url %>"></audio>
+    </div>
+  <% } else if (embed) { %>
+    <button class="player__facade" type="button"
+            aria-label="Play <%= sub.title || 'this song' %>">
+      <% if (sub.thumbnail_url) { %>
+        <img class="player__art" src="<%= sub.thumbnail_url %>" alt="" loading="lazy">
+      <% } %>
+      <span class="player__badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+      </span>
+    </button>
+    <p class="player__fallback">
+      Not playing? <a href="<%= sub.source_url %>" target="_blank" rel="noopener">Open on <%= sub.source === 'youtube' ? 'YouTube' : 'Spotify' %></a>
+    </p>
+  <% } else { %>
+    <p class="player__fallback">
+      <a href="<%= sub.source_url %>" target="_blank" rel="noopener">Open the link</a>
+    </p>
+  <% } %>
+</div>

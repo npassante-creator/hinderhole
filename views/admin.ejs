@@ -1,0 +1,164 @@
+<%- include('partials/head', { title: 'Commissioner - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">Player view</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow">Commissioner</p>
+    <h1 class="marquee__title"><span><%= league.name %></span></h1>
+  </header>
+
+  <main class="panel">
+
+    <% if (error) { %><p class="notice notice--bad"><%= error %></p><% } %>
+    <% if (notice) { %><p class="notice notice--good"><%= notice %></p><% } %>
+
+    <dl class="facts">
+      <div class="facts__row">
+        <dt>Roster</dt>
+        <dd><%= roster.length %> players</dd>
+      </div>
+      <div class="facts__row">
+        <dt>Paid up</dt>
+        <dd><%= paidCount %> of <%= roster.length %></dd>
+      </div>
+      <div class="facts__row">
+        <dt>Pot</dt>
+        <dd>$<%= (paidCount * league.buy_in_cents / 100).toFixed(0) %> collected</dd>
+      </div>
+    </dl>
+
+
+    <h2 class="rack__heading">Invite link</h2>
+    <div class="invite">
+      <input class="invite__url" type="text" readonly
+             onclick="this.select()"
+             value="<%= appUrl %>/join/<%= league.invite_code %>">
+      <p class="fineprint">
+        Share this with the group. Anyone holding it can add themselves.
+        They still have to click a link sent to their own email, so nobody
+        can join as someone else. Rotating makes every old link dead.
+      </p>
+      <div class="moves">
+        <form method="post" action="/admin/invite/toggle">
+          <button class="chip <%= league.invites_open ? 'chip--on' : '' %>" type="submit">
+            <%= league.invites_open ? 'signups open' : 'signups closed' %>
+          </button>
+        </form>
+        <form method="post" action="/admin/auto/toggle">
+          <button class="chip <%= league.auto_advance ? 'chip--on' : '' %>" type="submit">
+            <%= league.auto_advance ? 'auto advance on' : 'auto advance off' %>
+          </button>
+        </form>
+        <form method="post" action="/admin/invite/rotate"
+              onsubmit="return confirm('Every existing invite link stops working. Continue?')">
+          <button class="chip" type="submit">new link</button>
+        </form>
+      </div>
+    </div>
+
+    <h2 class="rack__heading">Rounds</h2>
+    <ol class="rack">
+      <% rounds.forEach(function (r) { %>
+        <li class="strip strip--round strip--<%= r.status %>">
+          <span class="strip__code"><%= String(r.round_number).padStart(2, '0') %></span>
+          <div class="strip__body">
+            <h3 class="strip__title">
+              <a class="strip__deep" href="/admin/round/<%= r.id %>"><%= r.title %></a>
+            </h3>
+            <p class="strip__meta">
+              <%= r.submitted %> in &middot; songs <%= r.submitBy %>
+            </p>
+            <% if (r.moves.length) { %>
+              <p class="moves">
+                <% r.moves.forEach(function (m) { %>
+                  <form method="post" action="/admin/round/<%= r.id %>/status"
+                        <% if (m.confirm) { %>onsubmit="return confirm('<%= m.confirm %>')"<% } %>>
+                    <input type="hidden" name="status" value="<%= m.to %>">
+                    <button class="chip <%= m.to === 'revealed' ? 'chip--danger' : '' %>" type="submit"><%= m.label %></button>
+                  </form>
+                <% }) %>
+              </p>
+            <% } %>
+          </div>
+          <span class="strip__state"><%= r.status %><% if (r.on_hold) { %> &middot; held<% } %></span>
+        </li>
+      <% }) %>
+    </ol>
+
+    <h2 class="rack__heading">Roster</h2>
+    <table class="grid">
+      <thead>
+        <tr><th>Player</th><th>Songs</th><th>Dues</th><th>Role</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% roster.forEach(function (p) { %>
+          <tr>
+            <td>
+              <span class="grid__name"><%= p.name %></span>
+              <span class="grid__sub"><%= p.email %></span>
+              <% if (!p.last_login_at) { %>
+                <span class="tag tag--late">never signed in</span>
+              <% } %>
+            </td>
+            <td class="grid__num"><%= p.songs_in %></td>
+            <td>
+              <form method="post" action="/admin/roster/<%= p.player_id %>/dues">
+                <button class="chip <%= p.dues_paid_at ? 'chip--on' : '' %>" type="submit">
+                  <%= p.dues_paid_at ? 'paid' : 'unpaid' %>
+                </button>
+              </form>
+            </td>
+            <td>
+              <form method="post" action="/admin/roster/<%= p.player_id %>/role">
+                <input type="hidden" name="role" value="<%= p.role === 'admin' ? 'player' : 'admin' %>">
+                <button class="chip <%= p.role === 'admin' ? 'chip--on' : '' %>" type="submit">
+                  <%= p.role %>
+                </button>
+              </form>
+            </td>
+            <td>
+              <form method="post" action="/admin/roster/<%= p.player_id %>/remove"
+                    onsubmit="return confirm('Remove <%= p.name %> from the roster? Their submissions go too.')">
+                <button class="chip chip--danger" type="submit">remove</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <details class="drawer">
+      <summary class="drawer__summary">Add players</summary>
+      <form class="strip strip--form" method="post" action="/admin/roster/add">
+        <label class="field">
+          <span class="field__label">One per line: name, then a comma, then email</span>
+          <textarea class="field__input field__input--area" name="bulk" rows="6"
+                    placeholder="Matthew Reuter, reutermatthew3@gmail.com"></textarea>
+        </label>
+        <button class="button" type="submit">Add to roster</button>
+      </form>
+      <p class="fineprint">
+        Adding someone does not email them. Send them the link to
+        hinderhole.com and they sign themselves in.
+      </p>
+    </details>
+
+    <% if (recent.length) { %>
+      <h2 class="rack__heading">Recent actions</h2>
+      <ul class="ledger">
+        <% recent.forEach(function (a) { %>
+          <li class="ledger__row">
+            <span class="ledger__when"><%= a.when %></span>
+            <span class="ledger__what"><%= a.detail || a.action %></span>
+            <span class="ledger__who"><%= a.actor %></span>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+
+  </main>
+
+<%- include('partials/foot') %>

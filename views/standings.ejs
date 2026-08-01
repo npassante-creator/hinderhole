@@ -1,0 +1,72 @@
+<%- include('partials/head', { title: 'Standings - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">All rounds</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow"><%= revealedCount %> of <%= rounds.length %> rounds counted</p>
+    <h1 class="marquee__title"><span>Standings</span></h1>
+  </header>
+
+  <main class="panel">
+
+    <% if (!revealedCount) { %>
+      <div class="strip strip--message">
+        <p>No rounds have been revealed yet. Nothing to count.</p>
+      </div>
+    <% } else { %>
+
+      <ol class="league">
+        <% table.forEach(function (row) { %>
+          <li class="league__row <%= row.place <= payouts.length ? 'league__row--paid' : '' %>">
+            <span class="league__place"><%= row.place %></span>
+            <span class="league__name"><%= row.name %></span>
+            <span class="league__detail">
+              <%= row.rounds_played %> rounds<% if (row.wins) { %> &middot; <%= row.wins %> won<% } %>
+            </span>
+            <span class="league__points"><%= row.points %></span>
+          </li>
+        <% }) %>
+      </ol>
+
+      <% if (payouts.length) { %>
+        <h2 class="rack__heading">Payout after ten rounds</h2>
+        <dl class="facts">
+          <% payouts.forEach(function (amount, i) { %>
+            <div class="facts__row">
+              <dt><%= ['First', 'Second', 'Third', 'Fourth', 'Fifth'][i] || ('Place ' + (i + 1)) %></dt>
+              <dd>$<%= amount.toFixed(0) %></dd>
+            </div>
+          <% }) %>
+        </dl>
+      <% } %>
+
+    <% } %>
+
+    <% if (revealedCount) { %>
+      <p class="moves">
+        <a class="chip" href="/season.csv">Season CSV</a>
+      </p>
+    <% } %>
+
+    <h2 class="rack__heading">Rounds</h2>
+    <ol class="rack">
+      <% rounds.forEach(function (r) { %>
+        <li class="strip strip--round strip--<%= r.status %> <%= r.status === 'revealed' ? 'strip--link' : '' %>">
+          <% if (r.status === 'revealed') { %>
+            <a class="strip__hit" href="/round/<%= r.id %>/results"></a>
+          <% } %>
+          <span class="strip__code"><%= String(r.round_number).padStart(2, '0') %></span>
+          <div class="strip__body">
+            <h3 class="strip__title"><%= r.title %></h3>
+          </div>
+          <span class="strip__state"><%= r.status %></span>
+        </li>
+      <% }) %>
+    </ol>
+
+  </main>
+
+<%- include('partials/foot') %>

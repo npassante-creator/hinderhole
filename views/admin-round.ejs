@@ -1,0 +1,155 @@
+<%- include('partials/head', { title: 'Round ' + round.round_number + ' - Commissioner' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/admin">Commissioner</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow">Round <%= String(round.round_number).padStart(2, '0') %> &middot; <%= round.status %></p>
+    <h1 class="marquee__title"><span><%= round.title %></span></h1>
+  </header>
+
+  <main class="panel">
+
+    <% if (error) { %><p class="notice notice--bad"><%= error %></p><% } %>
+    <% if (notice) { %><p class="notice notice--good"><%= notice %></p><% } %>
+
+    <dl class="facts">
+      <div class="facts__row"><dt>Songs due</dt><dd><%= submitBy || 'unset' %></dd></div>
+      <div class="facts__row"><dt>Votes due</dt><dd><%= voteBy || 'unset' %></dd></div>
+      <div class="facts__row"><dt>Still missing</dt><dd><%= missing %></dd></div>
+    </dl>
+
+    <h2 class="rack__heading">Give them more time</h2>
+
+    <div class="extend">
+      <p class="extend__label">Push the song deadline back</p>
+      <p class="moves">
+        <% bumps.forEach(function (b) { %>
+          <form method="post" action="/admin/round/<%= round.id %>/extend">
+            <input type="hidden" name="which" value="submit">
+            <input type="hidden" name="by" value="<%= b.key %>">
+            <input type="hidden" name="shift" value="1">
+            <button class="chip" type="submit">+<%= b.label %></button>
+          </form>
+        <% }) %>
+      </p>
+      <p class="fineprint">
+        Moves the voting deadline by the same amount, so the listening window
+        stays five days.
+      </p>
+
+      <p class="extend__label">Push the voting deadline only</p>
+      <p class="moves">
+        <% bumps.forEach(function (b) { %>
+          <form method="post" action="/admin/round/<%= round.id %>/extend">
+            <input type="hidden" name="which" value="vote">
+            <input type="hidden" name="by" value="<%= b.key %>">
+            <button class="chip" type="submit">+<%= b.label %></button>
+          </form>
+        <% }) %>
+      </p>
+
+      <p class="extend__label">Or stop the clock on this round</p>
+      <p class="moves">
+        <form method="post" action="/admin/round/<%= round.id %>/hold">
+          <button class="chip <%= round.on_hold ? 'chip--on' : '' %>" type="submit">
+            <%= round.on_hold ? 'on hold' : 'hold this round' %>
+          </button>
+        </form>
+      </p>
+      <p class="fineprint">
+        A held round sits where it is until you move it by hand. The rest of
+        the season carries on as normal.
+      </p>
+    </div>
+
+    <h2 class="rack__heading">Who is in</h2>
+    <table class="grid">
+      <thead>
+        <tr><th>Player</th><th>Song</th><th>Extension</th></tr>
+      </thead>
+      <tbody>
+        <% people.forEach(function (p) { %>
+          <tr class="<%= p.submission_id ? '' : 'grid__row--missing' %>">
+            <td>
+              <span class="grid__name"><%= p.name %></span>
+              <% if (p.is_late) { %><span class="tag tag--late">late</span><% } %>
+            </td>
+            <td>
+              <% if (p.submission_id) { %>
+                <span class="grid__song"><%= p.title %></span>
+                <span class="grid__sub"><%= p.artist || 'unknown' %> &middot; <%= p.submittedAt %></span>
+              <% } else { %>
+                <span class="grid__sub">nothing yet</span>
+              <% } %>
+            </td>
+            <td>
+              <form method="post" action="/admin/round/<%= round.id %>/waiver">
+                <input type="hidden" name="player_id" value="<%= p.id %>">
+                <% if (p.has_waiver) { %>
+                  <input type="hidden" name="revoke" value="1">
+                  <button class="chip chip--on" type="submit">granted</button>
+                <% } else { %>
+                  <button class="chip" type="submit">grant</button>
+                <% } %>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <p class="fineprint">
+      An extension lets someone vote this round even though their song was
+      late or never arrived. It does not change their song.
+    </p>
+
+    <details class="drawer">
+      <summary class="drawer__summary">Enter a song for someone</summary>
+      <form class="strip strip--form" method="post" action="/admin/round/<%= round.id %>/submit-for">
+        <label class="field">
+          <span class="field__label">Player</span>
+          <select class="field__input" name="player_id" required>
+            <option value="">Choose a player</option>
+            <% people.forEach(function (p) { %>
+              <option value="<%= p.id %>"><%= p.name %><%= p.submission_id ? ' (replaces current)' : '' %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field__label">Link they sent you</span>
+          <input class="field__input" type="url" name="url" placeholder="https://youtu.be/..." required>
+        </label>
+        <button class="button" type="submit">Enter song</button>
+      </form>
+      <p class="fineprint">
+        For people who email you a song instead of using the site. Entered
+        this way it is never marked late.
+      </p>
+    </details>
+
+    <details class="drawer">
+      <summary class="drawer__summary">Change deadlines or title</summary>
+      <form class="strip strip--form" method="post" action="/admin/round/<%= round.id %>/deadlines">
+        <label class="field">
+          <span class="field__label">Title</span>
+          <input class="field__input" type="text" name="title" value="<%= round.title %>">
+        </label>
+        <label class="field">
+          <span class="field__label">Songs due (Central)</span>
+          <input class="field__input" type="datetime-local" name="submit_deadline">
+        </label>
+        <label class="field">
+          <span class="field__label">Votes due (Central)</span>
+          <input class="field__input" type="datetime-local" name="vote_deadline">
+        </label>
+        <button class="button" type="submit">Save round</button>
+      </form>
+      <p class="fineprint">Leave a date blank to keep it as it is.</p>
+    </details>
+
+  </main>
+
+<%- include('partials/foot') %>
