@@ -1320,3 +1320,40 @@ a.chip:hover {
 }
 
 .extend__label:first-child { margin-top: 0; }
+
+/* Chips wrapped in their own form still need to sit in the flex row. */
+.moves form {
+  display: contents;
+}
+
+/* On the dark panel, chips need light text. The .strip context overrides
+   this back to ink where the background is cream. */
+.panel .chip {
+  color: var(--stock);
+  border-color: rgba(240, 232, 216, .32);
+}
+
+.panel .chip:hover {
+  background: var(--stock);
+  color: var(--field);
+  border-color: var(--stock);
+}
+
+.panel .chip--on {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--field);
+}
+
+.panel .chip--danger {
+  border-color: rgba(202, 22, 35, .6);
+  color: #d98a92;
+}
+
+.panel .chip--danger:hover {
+  background: var(--oxblood);
+  color: var(--stock);
+  border-color: var(--oxblood);
+}
+
+.strip .chip { color: var(--ink); border-color: rgba(30, 24, 28, .35); }
