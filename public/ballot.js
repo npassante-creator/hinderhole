@@ -14,6 +14,7 @@
   if (!tally) return;
 
   var roundId = tally.getAttribute('data-round');
+  var scope = tally.getAttribute('data-scope') || 'round';
   var budget = Number(tally.getAttribute('data-budget'));
   var spent = Number(tally.getAttribute('data-spent'));
 
@@ -57,7 +58,7 @@
     var pip = e.target.closest && e.target.closest('.dial__pip');
     if (!pip) return;
 
-    var card = pip.closest('.card');
+    var card = pip.closest('.card, .idea');
     var dial = pip.closest('.dial');
     var points = Number(pip.getAttribute('data-points'));
 
@@ -71,10 +72,15 @@
     paint(null);
     card.classList.add('card--saving');
 
-    post('/round/' + roundId + '/vote', {
-      submission_id: Number(card.getAttribute('data-submission')),
-      points: points,
-    }).then(function (data) {
+    var url = scope === 'category'
+      ? '/categories/' + card.getAttribute('data-idea') + '/vote'
+      : '/round/' + roundId + '/vote';
+    var payload = scope === 'category'
+      ? { points: points }
+      : { submission_id: Number(card.getAttribute('data-submission')),
+          points: points };
+
+    post(url, payload).then(function (data) {
       spent = data.spent;
       card.classList.remove('card--saving');
       card.classList.add('card--saved');

@@ -1,0 +1,144 @@
+<%- include('partials/head', { title: 'Categories - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">All rounds</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow">
+      <% if (voting) { %>Voting open<% } else if (settled) { %>Final list<% } else { %>Suggestion box<% } %>
+    </p>
+    <h1 class="marquee__title"><span>Categories</span></h1>
+  </header>
+
+  <main class="panel">
+
+    <% if (error) { %><p class="notice notice--bad"><%= error %></p><% } %>
+    <% if (notice) { %><p class="notice notice--good"><%= notice %></p><% } %>
+
+    <% if (isAdmin) { %>
+      <p class="moves">
+        <form method="post" action="/categories/phase">
+          <input type="hidden" name="status" value="open">
+          <button class="chip <%= (!voting && !settled) ? 'chip--on' : '' %>" type="submit">suggestions</button>
+        </form>
+        <form method="post" action="/categories/phase">
+          <input type="hidden" name="status" value="nominating">
+          <button class="chip <%= voting ? 'chip--on' : '' %>" type="submit">voting</button>
+        </form>
+        <form method="post" action="/categories/phase">
+          <input type="hidden" name="status" value="settled">
+          <button class="chip <%= settled ? 'chip--on' : '' %>" type="submit">closed</button>
+        </form>
+      </p>
+    <% } %>
+
+    <% if (voting) { %>
+      <div class="tally" id="tally"
+           data-budget="<%= budget %>"
+           data-spent="<%= spent %>"
+           data-scope="category">
+        <div class="tally__meter">
+          <span class="tally__fill" style="width: <%= Math.round(spent / budget * 100) %>%"></span>
+        </div>
+        <p class="tally__line">
+          <strong class="tally__spent"><%= spent %></strong> of <%= budget %> points spent
+          <span class="tally__state"></span>
+        </p>
+      </div>
+    <% } %>
+
+    <% if (!settled) { %>
+      <form class="strip strip--form" method="post" action="/categories">
+        <label class="field">
+          <span class="field__label">Suggest a category</span>
+          <input class="field__input" type="text" name="title" maxlength="120"
+                 placeholder="Songs about being wrong" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Any rules or clarification (optional)</span>
+          <input class="field__input" type="text" name="description"
+                 maxlength="200" placeholder="Instrumentals count">
+        </label>
+        <button class="button" type="submit">Add it</button>
+      </form>
+    <% } %>
+
+    <% if (!ideas.length) { %>
+      <div class="strip strip--message">
+        <p>Nothing suggested yet. Go first.</p>
+      </div>
+    <% } else { %>
+
+      <h2 class="rack__heading">
+        <%= ideas.length %> on the list<% if (!showPoints) { %>, newest first<% } %>
+      </h2>
+
+      <ol class="ideas">
+        <% ideas.forEach(function (idea) { %>
+          <li class="idea <%= idea.place === 1 && showPoints ? 'idea--top' : '' %>"
+              data-idea="<%= idea.id %>">
+
+            <div class="idea__head">
+              <% if (showPoints) { %>
+                <span class="idea__place"><%= idea.place %></span>
+              <% } %>
+              <h3 class="idea__title"><%= idea.title %></h3>
+              <% if (showPoints) { %>
+                <span class="idea__score"><%= idea.points %></span>
+              <% } %>
+            </div>
+
+            <% if (idea.description) { %>
+              <p class="idea__desc"><%= idea.description %></p>
+            <% } %>
+
+            <p class="idea__by">
+              <%= idea.proposed_by || 'someone who has left' %>
+              <% if (idea.is_mine) { %><span class="tag">yours</span><% } %>
+              <% if (showPoints && idea.backers) { %>
+                <span class="idea__backers">&middot; <%= idea.backers %> backing</span>
+              <% } %>
+            </p>
+
+            <% if (voting) { %>
+              <div class="dial" role="group" aria-label="Points for <%= idea.title %>">
+                <% for (var n = 0; n <= budget; n++) { %>
+                  <button class="dial__pip <%= Number(idea.my_points) === n ? 'is-on' : '' %>"
+                          type="button" data-points="<%= n %>"
+                          aria-pressed="<%= Number(idea.my_points) === n %>"><%= n %></button>
+                <% } %>
+              </div>
+            <% } %>
+
+            <% if (!settled && (idea.is_mine || isAdmin)) { %>
+              <form method="post" action="/categories/<%= idea.id %>/remove"
+                    onsubmit="return confirm('Remove this suggestion?')">
+                <button class="chip chip--danger" type="submit">remove</button>
+              </form>
+            <% } %>
+
+          </li>
+        <% }) %>
+      </ol>
+    <% } %>
+
+    <p class="fineprint">
+      <% if (voting) { %>
+        Ten points, spread them however you like. Saves as you tap. The top
+        ones become next season.
+      <% } else if (settled) { %>
+        The list is final. These are the categories for next season.
+      <% } else { %>
+        Suggest as many as you like. No scores yet, on purpose: a running
+        tally turns a suggestion box into a popularity contest before anyone
+        has thought about it. Voting opens when the commissioner says so.
+      <% } %>
+    </p>
+
+  </main>
+
+<script src="/ballot.js?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : '1' %>" defer></script>
+
+<%- include('partials/foot') %>

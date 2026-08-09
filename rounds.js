@@ -79,6 +79,17 @@ function router(db) {
   async function renderRound(req, res, extra = {}) {
     const submission = await getSubmission(req.round.id, req.player.id);
 
+    // Ten weeks of obscure music across eighteen people. Somebody will
+    // resubmit something. Warn, never block: a reprise might be the joke.
+    let echo = [];
+    if (submission && submission.external_id) {
+      const { rows } = await db.query(
+        'select * from song_seen_before($1, $2, $3)',
+        [req.round.league_id, submission.external_id, req.round.id]
+      );
+      echo = rows;
+    }
+
     const { rows: counts } = await db.query(
       `select count(*)::int as submitted,
               (select count(*)::int from memberships where league_id = $2) as roster
@@ -89,6 +100,7 @@ function router(db) {
     res.render('round', {
       round: req.round,
       submission,
+      echo,
       submitBy: formatDeadline(req.round.submit_deadline),
       voteBy: formatDeadline(req.round.vote_deadline),
       pastDeadline: isPastDeadline(req.round),

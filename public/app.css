@@ -1357,3 +1357,83 @@ a.chip:hover {
 }
 
 .strip .chip { color: var(--ink); border-color: rgba(30, 24, 28, .35); }
+
+/* ---------------------------------------------------------------
+   The suggestion box
+   --------------------------------------------------------------- */
+
+.ideas { list-style: none; margin: 0 0 2rem; padding: 0; }
+
+.idea {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(240, 232, 216, .12);
+}
+
+.idea__head {
+  display: flex;
+  align-items: baseline;
+  gap: .7rem;
+}
+
+.idea__place {
+  font-family: var(--util);
+  font-size: .7rem;
+  color: var(--steel);
+  flex: none;
+  min-width: 1.2rem;
+}
+
+.idea--top .idea__place { color: var(--amber); }
+
+.idea__title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.25rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+  margin: 0;
+  flex: 1;
+}
+
+.idea__score {
+  font-family: var(--util);
+  font-size: 1.15rem;
+  color: var(--amber);
+  flex: none;
+}
+
+.idea__desc {
+  margin: .3rem 0 0;
+  font-size: .88rem;
+  color: var(--stock);
+}
+
+.idea__by {
+  margin: .3rem 0 .6rem;
+  font-family: var(--util);
+  font-size: .68rem;
+  letter-spacing: .06em;
+  color: var(--steel);
+}
+
+.idea__backers { color: var(--steel); }
+
+/* A song that has already been played this season. */
+.echo {
+  margin: .75rem 0 0;
+  padding: .6rem .8rem;
+  background: rgba(242, 168, 60, .12);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--strip-radius);
+  font-size: .85rem;
+}
+
+.echo__label {
+  font-family: var(--util);
+  font-size: .62rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--amber);
+  display: block;
+  margin-bottom: .2rem;
+}

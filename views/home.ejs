@@ -2,6 +2,7 @@
 
   <header class="bar">
     <a class="bar__back" href="/standings">Standings</a>
+    <a class="bar__back" href="/categories">Categories</a>
     <span class="bar__name"><%= player.name %></span>
     <% if (typeof isAdmin !== "undefined" && isAdmin) { %><a class="bar__admin" href="/admin">Commissioner</a><% } %>
     <form method="post" action="/auth/logout">
