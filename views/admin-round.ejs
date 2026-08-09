@@ -138,6 +138,11 @@
           <input class="field__input" type="text" name="title" value="<%= round.title %>">
         </label>
         <label class="field">
+          <span class="field__label">What counts (shown to everyone under the title)</span>
+          <textarea class="field__input field__input--area" name="description" rows="3"
+                    placeholder="Instrumentals count. Live versions do not. Argue with me."><%= round.description || '' %></textarea>
+        </label>
+        <label class="field">
           <span class="field__label">Songs due (Central)</span>
           <input class="field__input" type="datetime-local" name="submit_deadline">
         </label>
@@ -147,7 +152,10 @@
         </label>
         <button class="button" type="submit">Save round</button>
       </form>
-      <p class="fineprint">Leave a date blank to keep it as it is.</p>
+      <p class="fineprint">
+        Leave a date blank to keep it as it is. Clearing the caption and
+        saving removes it.
+      </p>
     </details>
 
   </main>

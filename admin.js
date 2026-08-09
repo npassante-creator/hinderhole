@@ -221,13 +221,16 @@ function router(db) {
                      else ($2 || ':00')::timestamp at time zone 'America/Chicago' end,
                   vote_deadline = case when $3 = '' then vote_deadline
                      else ($3 || ':00')::timestamp at time zone 'America/Chicago' end,
-                  title = coalesce(nullif($4, ''), title)
+                  title = coalesce(nullif($4, ''), title),
+                  -- Empty clears it, which is how you take a caption back off.
+                  description = nullif($5, '')
             where id = $1`,
           [
             req.round.id,
             String(req.body.submit_deadline || ''),
             String(req.body.vote_deadline || ''),
             String(req.body.title || ''),
+            String(req.body.description || '').trim(),
           ]
         );
         await log(req.league.id, req.player.id, 'round_edit',

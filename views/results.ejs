@@ -9,6 +9,9 @@
   <header class="marquee marquee--small">
     <p class="marquee__eyebrow">Round <%= String(round.round_number).padStart(2, '0') %> &middot; results</p>
     <h1 class="marquee__title"><span><%= round.title %></span></h1>
+    <% if (round.description) { %>
+      <p class="marquee__sub"><%= round.description %></p>
+    <% } %>
   </header>
 
   <main class="panel">
