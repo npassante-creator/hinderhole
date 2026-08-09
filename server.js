@@ -21,6 +21,7 @@ const resultRoutes = require('./results');
 const uploadRoutes = require('./upload');
 const exportRoutes = require('./export');
 const categoryRoutes = require('./categories');
+const statsRoutes = require('./stats');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,6 +63,7 @@ app.use(resultRoutes.router(db));
 app.use(uploadRoutes.router(db));
 app.use(exportRoutes.router(db));
 app.use(categoryRoutes.router(db));
+app.use(statsRoutes.router(db));
 app.use(roundRoutes.router(db));
 app.use(adminRoutes.router(db));
 app.use(joinRoutes.router(db));

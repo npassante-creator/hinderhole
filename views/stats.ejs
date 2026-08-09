@@ -1,0 +1,114 @@
+<%- include('partials/head', { title: 'Season stats - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">All rounds</a>
+    <a class="bar__back" href="/standings">Standings</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow"><%= rounds %> rounds counted</p>
+    <h1 class="marquee__title"><span>The numbers</span></h1>
+  </header>
+
+  <main class="panel">
+
+    <% if (!rounds) { %>
+      <div class="strip strip--message">
+        <p>Nothing to count until a round has been revealed.</p>
+      </div>
+    <% } else { %>
+
+      <% if (biggest) { %>
+        <div class="crown">
+          <p class="crown__label">Biggest score of the season</p>
+          <p class="crown__song"><%= biggest.title %></p>
+          <p class="crown__who">
+            <%= biggest.name %> &middot; <%= biggest.points %> points &middot; round <%= biggest.round_number %>
+          </p>
+        </div>
+      <% } %>
+
+      <% if (generous.length) { %>
+        <h2 class="rack__heading">Spreaders and hoarders</h2>
+        <table class="grid">
+          <thead>
+            <tr><th>Voter</th><th>Songs backed<br>per round</th><th>Biggest<br>single</th></tr>
+          </thead>
+          <tbody>
+            <% generous.forEach(function (g) { %>
+              <tr>
+                <td><span class="grid__name"><%= g.name %></span></td>
+                <td class="grid__num"><%= g.per_round %></td>
+                <td class="grid__num"><%= g.biggest_single %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <p class="fineprint">
+          High on the left means spreading thin. High on the right means going
+          all in on favourites.
+        </p>
+      <% } %>
+
+      <% if (maxed.length) { %>
+        <h2 class="rack__heading">All ten on one song</h2>
+        <ul class="ledger">
+          <% maxed.forEach(function (m) { %>
+            <li class="ledger__row">
+              <span class="ledger__when">R<%= m.round_number %></span>
+              <span class="ledger__what"><%= m.voter %> gave everything to <%= m.title %></span>
+              <span class="ledger__who"><%= m.submitter %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+
+      <% if (pairs.length) { %>
+        <h2 class="rack__heading">Who keeps voting for whom</h2>
+        <ul class="ledger">
+          <% pairs.forEach(function (p) { %>
+            <li class="ledger__row">
+              <span class="ledger__when"><%= p.points %></span>
+              <span class="ledger__what"><%= p.voter %> &rarr; <%= p.submitter %></span>
+              <span class="ledger__who"><%= p.times %>&times;</span>
+            </li>
+          <% }) %>
+        </ul>
+        <p class="fineprint">Points given across the season. Draw your own conclusions.</p>
+      <% } %>
+
+      <% if (divisive.length) { %>
+        <h2 class="rack__heading">Loved hard by few</h2>
+        <ul class="ledger">
+          <% divisive.forEach(function (d) { %>
+            <li class="ledger__row">
+              <span class="ledger__when">R<%= d.round_number %></span>
+              <span class="ledger__what"><%= d.title %> &middot; <%= d.points %> from <%= d.backers %></span>
+              <span class="ledger__who"><%= d.name %></span>
+            </li>
+          <% }) %>
+        </ul>
+        <p class="fineprint">
+          Highest points per backer. Songs a few people would not shut up about.
+        </p>
+      <% } %>
+
+      <% if (shutouts.length) { %>
+        <h2 class="rack__heading">Nobody voted for these</h2>
+        <ul class="ledger">
+          <% shutouts.forEach(function (s) { %>
+            <li class="ledger__row">
+              <span class="ledger__when">R<%= s.round_number %></span>
+              <span class="ledger__what"><%= s.title %></span>
+              <span class="ledger__who"><%= s.name %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+
+    <% } %>
+
+  </main>
+
+<%- include('partials/foot') %>

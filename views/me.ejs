@@ -1,0 +1,76 @@
+<%- include('partials/head', { title: 'My picks - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">All rounds</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow"><%= player.name %></p>
+    <h1 class="marquee__title"><span>My picks</span></h1>
+  </header>
+
+  <main class="panel">
+
+    <dl class="facts">
+      <div class="facts__row"><dt>Points earned</dt><dd><%= total %></dd></div>
+      <div class="facts__row"><dt>Rounds scored</dt><dd><%= played %></dd></div>
+      <div class="facts__row"><dt>Rounds won</dt><dd><%= wins %></dd></div>
+      <% if (best) { %>
+        <div class="facts__row">
+          <dt>Best showing</dt>
+          <dd><%= best.title %>, <%= best.points %></dd>
+        </div>
+      <% } %>
+    </dl>
+
+    <ol class="results">
+      <% picks.forEach(function (p) { %>
+        <li class="result">
+
+          <div class="result__head">
+            <span class="result__place">
+              Round <%= String(p.round_number).padStart(2, '0') %>
+            </span>
+            <% if (p.points !== null) { %>
+              <span class="result__score">
+                <strong><%= p.points %></strong>
+                <span class="result__backers">from <%= p.backers %></span>
+              </span>
+            <% } else { %>
+              <span class="result__backers"><%= p.status %></span>
+            <% } %>
+          </div>
+
+          <p class="idea__by"><%= p.category %></p>
+
+          <% if (p.id) { %>
+            <h2 class="result__title"><%= p.title %></h2>
+            <p class="result__artist"><%= p.artist || 'Unknown artist' %></p>
+            <p class="result__by">
+              <% if (p.place) { %>
+                <span class="tag tag--gave"><%= p.place.place %> of <%= p.place.field %></span>
+              <% } %>
+              <% if (p.is_late) { %><span class="tag tag--late">late</span><% } %>
+              <a href="<%= p.source_url %>" target="_blank" rel="noopener">open</a>
+            </p>
+            <% if (p.note) { %>
+              <blockquote class="result__note"><%= p.note %></blockquote>
+            <% } %>
+          <% } else { %>
+            <p class="card__mine">
+              <% if (p.status === 'submitting') { %>
+                Nothing picked yet. <a href="/round/<%= p.round_id %>">Pick one</a>.
+              <% } else { %>
+                You sat this one out.
+              <% } %>
+            </p>
+          <% } %>
+
+        </li>
+      <% }) %>
+    </ol>
+
+  </main>
+
+<%- include('partials/foot') %>

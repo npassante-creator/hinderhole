@@ -1,0 +1,43 @@
+<%- include('partials/head', { title: 'Coming up - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">All rounds</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <header class="marquee marquee--small">
+    <p class="marquee__eyebrow">Plan ahead</p>
+    <h1 class="marquee__title"><span>The season</span></h1>
+  </header>
+
+  <main class="panel">
+
+    <ol class="ideas">
+      <% rounds.forEach(function (r) { %>
+        <li class="idea <%= r.status === 'submitting' ? 'idea--top' : '' %>">
+          <div class="idea__head">
+            <span class="idea__place"><%= String(r.round_number).padStart(2, '0') %></span>
+            <h3 class="idea__title"><%= r.title %></h3>
+          </div>
+          <% if (r.description) { %>
+            <p class="idea__desc"><%= r.description %></p>
+          <% } %>
+          <p class="idea__by">
+            <% if (r.status === 'draft') { %>
+              opens later &middot; songs due <%= r.songsDue %>
+            <% } else { %>
+              <%= r.status %> &middot; songs <%= r.songsDue %> &middot; votes <%= r.votesDue %>
+            <% } %>
+          </p>
+        </li>
+      <% }) %>
+    </ol>
+
+    <p class="fineprint">
+      Ten categories, one song each. Nothing stops you picking next month's
+      song today.
+    </p>
+
+  </main>
+
+<%- include('partials/foot') %>
