@@ -34,7 +34,9 @@ function fmt(date, opts = {}) {
 /** Legal forward moves, plus the one backward move worth allowing. */
 const TRANSITIONS = {
   draft: ['submitting'],
-  submitting: ['voting'],
+    // Back to draft is how you unblock a round that is holding
+  // up the one you actually want open.
+  submitting: ['voting', 'draft'],
   voting: ['revealed', 'submitting'],
   // Revealed can be walked back. A mistap should never strand a round.
   revealed: ['voting'],
@@ -54,6 +56,7 @@ const BUMPS = {
 };
 
 const TRANSITION_LABEL = {
+  draft: 'Close this round',
   submitting: 'Open for songs',
   voting: 'Open voting',
   revealed: 'Reveal results',
@@ -91,6 +94,13 @@ function router(db) {
     } catch (err) {
       next(err);
     }
+  }
+
+  /** A name is what you want to read a week later, not a row id. */
+  async function nameOf(playerId) {
+    const { rows } = await db.query(
+      'select name from players where id = $1', [playerId]);
+    return rows[0] ? rows[0].name : `player ${playerId}`;
   }
 
   async function log(leagueId, actorId, action, detail) {
@@ -194,11 +204,17 @@ function router(db) {
             [req.round.id, to]);
         } catch (e) {
           // The partial unique indexes allow only one submitting and one
-          // voting round per league at a time.
-          return res.redirect(
-            '/admin?err=' + encodeURIComponent(
-              'Another round is already in that phase. Move it along first.')
+          // voting round per league at a time. Say which one is in the way,
+          // because "move it along first" is useless against a list of ten.
+          const { rows: blocking } = await db.query(
+            `select round_number, title from rounds
+              where league_id = $1 and status = $2 and id <> $3`,
+            [req.league.id, to, req.round.id]
           );
+          const who = blocking[0]
+            ? `Round ${blocking[0].round_number}, ${blocking[0].title}, is already ${to}. Move that one along first.`
+            : 'Another round is already in that phase. Move it along first.';
+          return res.redirect('/admin?err=' + encodeURIComponent(who));
         }
 
         await log(req.league.id, req.player.id, 'round_status',
@@ -295,7 +311,7 @@ function router(db) {
             [req.round.id, playerId]
           );
           await log(req.league.id, req.player.id, 'waiver_revoked',
-            `Round ${req.round.round_number}, player ${playerId}`);
+            `Round ${req.round.round_number}, ${await nameOf(playerId)}`);
         } else {
           await db.query(
             `insert into vote_waivers (round_id, player_id, granted_by, reason)
@@ -305,7 +321,7 @@ function router(db) {
              String(req.body.reason || '').trim() || null]
           );
           await log(req.league.id, req.player.id, 'waiver_granted',
-            `Round ${req.round.round_number}, player ${playerId}`);
+            `Round ${req.round.round_number}, ${await nameOf(playerId)}`);
         }
         res.redirect(`/admin/round/${req.round.id}?ok=` +
           encodeURIComponent('Extension updated.'));
@@ -353,7 +369,7 @@ function router(db) {
         );
 
         await log(req.league.id, req.player.id, 'submitted_for',
-          `Round ${req.round.round_number}, player ${playerId}: ${track.title}`);
+          `Round ${req.round.round_number}, ${await nameOf(playerId)}: ${track.title}`);
         res.redirect(`/admin/round/${req.round.id}?ok=` +
           encodeURIComponent('Song entered.'));
       } catch (err) {
@@ -425,7 +441,7 @@ function router(db) {
           [req.league.id, req.params.playerId, role]
         );
         await log(req.league.id, req.player.id, 'role_change',
-          `Player ${req.params.playerId} to ${role}`);
+          `${await nameOf(req.params.playerId)} is now ${role}`);
         res.redirect('/admin?ok=' + encodeURIComponent('Role updated.'));
       } catch (err) {
         next(err);
@@ -517,7 +533,7 @@ function router(db) {
           [req.league.id, req.params.playerId]
         );
         await log(req.league.id, req.player.id, 'roster_remove',
-          `Player ${req.params.playerId} removed`);
+          `${await nameOf(req.params.playerId)} removed from the roster`);
         res.redirect('/admin?ok=' + encodeURIComponent('Removed from the roster.'));
       } catch (err) {
         next(err);
