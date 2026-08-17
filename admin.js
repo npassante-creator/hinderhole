@@ -15,7 +15,7 @@
 
 const express = require('express');
 const { resolve, UnsupportedSourceError } = require('./resolver');
-const { requireAuth } = require('./auth');
+const { requireAuth, requestLoginLink } = require('./auth');
 
 const CT = 'America/Chicago';
 
@@ -587,6 +587,52 @@ function router(db) {
           encodeURIComponent(rows[0].on_hold
             ? 'Round held. It will not advance until you release it.'
             : 'Hold released. It will advance on its deadline.'));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+  // ---------------------------------------------------------------
+  // Welcoming the roster
+  // ---------------------------------------------------------------
+  // Twenty one people are not going to independently decide to visit a
+  // website and type their address. Send them a way in.
+
+  r.post('/admin/roster/welcome-all', requireAuth, requireAdmin, form,
+    async (req, res, next) => {
+      try {
+        const everyone = req.body.everyone === '1';
+
+        const { rows: people } = await db.query(
+          `select p.id, p.name, p.email
+             from memberships m
+             join players p on p.id = m.player_id
+            where m.league_id = $1
+              and p.is_active
+              and p.email not like '%@demo.invalid'
+              ${everyone ? '' : 'and p.last_login_at is null'}
+            order by p.name`,
+          [req.league.id]
+        );
+
+        let sent = 0;
+        let failed = 0;
+        for (const person of people) {
+          try {
+            await requestLoginLink(db, person.email, { ip: req.ip });
+            sent++;
+          } catch (err) {
+            console.error('[admin] welcome failed for', person.email, err.message);
+            failed++;
+          }
+        }
+
+        await log(req.league.id, req.player.id, 'welcome_sent',
+          `${sent} sign in links sent${failed ? `, ${failed} failed` : ''}`);
+
+        res.redirect('/admin?ok=' + encodeURIComponent(
+          `${sent} sign in link${sent === 1 ? '' : 's'} sent.` +
+          (failed ? ` ${failed} failed, check the logs.` : '')));
       } catch (err) {
         next(err);
       }

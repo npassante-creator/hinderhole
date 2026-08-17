@@ -130,6 +130,22 @@
       </tbody>
     </table>
 
+    <p class="moves">
+      <form method="post" action="/admin/roster/welcome-all"
+            onsubmit="return confirm('Email a sign in link to everyone who has not signed in yet?')">
+        <button class="chip" type="submit">email everyone who has not signed in</button>
+      </form>
+      <form method="post" action="/admin/roster/welcome-all"
+            onsubmit="return confirm('Email a fresh sign in link to the WHOLE roster, including people already signed in?')">
+        <input type="hidden" name="everyone" value="1">
+        <button class="chip chip--danger" type="submit">email the whole roster</button>
+      </form>
+    </p>
+    <p class="fineprint">
+      Sends each person a link that signs them straight in. Links work once
+      and expire in 20 minutes, so send these when people are around.
+    </p>
+
     <details class="drawer">
       <summary class="drawer__summary">Add players</summary>
       <form class="strip strip--form" method="post" action="/admin/roster/add">
