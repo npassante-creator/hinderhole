@@ -12,6 +12,31 @@
 
   <main class="panel">
 
+    <% if (typeof error !== 'undefined' && error) { %>
+      <p class="notice notice--bad"><%= error %></p>
+    <% } %>
+    <% if (typeof notice !== 'undefined' && notice) { %>
+      <p class="notice notice--good"><%= notice %></p>
+    <% } %>
+
+    <details class="drawer">
+      <summary class="drawer__summary">Change what people call you</summary>
+      <form class="strip strip--form" method="post" action="/me/name">
+        <label class="field">
+          <span class="field__label">Your name in the league</span>
+          <input class="field__input" type="text" name="name" maxlength="40"
+                 value="<%= player.name %>" required>
+        </label>
+        <button class="button" type="submit">Save</button>
+      </form>
+      <p class="fineprint">
+        This is what shows next to your songs when a round is revealed, and
+        on the standings. Change it whenever. Your email never shows to
+        anyone.
+      </p>
+    </details>
+
+
     <dl class="facts">
       <div class="facts__row"><dt>Points earned</dt><dd><%= total %></dd></div>
       <div class="facts__row"><dt>Rounds scored</dt><dd><%= played %></dd></div>

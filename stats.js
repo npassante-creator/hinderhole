@@ -95,6 +95,8 @@ function router(db) {
 
       res.render('me', {
         league: lg,
+        error: req.query.err || null,
+        notice: req.query.ok || null,
         picks: picks.map((p) => ({
           ...p,
           place: placeById.get(String(p.id)) || null,
@@ -266,6 +268,49 @@ function router(db) {
       next(err);
     }
   });
+
+  // ---------------------------------------------------------------
+  // What everyone else calls you
+  // ---------------------------------------------------------------
+  // The group runs on nicknames. The email stays fixed and stays private,
+  // so the commissioner can always tell who is who.
+
+  r.post('/me/name', requireAuth, express.urlencoded({ extended: false }),
+    async (req, res, next) => {
+      try {
+        const name = String(req.body.name || '').trim().replace(/\s+/g, ' ');
+
+        if (name.length < 2 || name.length > 40) {
+          return res.redirect('/me?err=' + encodeURIComponent(
+            'Pick something between 2 and 40 characters.'));
+        }
+
+        const lg = await league(req.player.id);
+        if (!lg) return res.redirect('/');
+
+        // Two people called Sam makes the reveal unreadable.
+        const { rows: clash } = await db.query(
+          `select 1 from memberships m
+             join players p on p.id = m.player_id
+            where m.league_id = $1
+              and p.id <> $2
+              and lower(p.name) = lower($3)
+            limit 1`,
+          [lg.id, req.player.id, name]
+        );
+        if (clash[0]) {
+          return res.redirect('/me?err=' + encodeURIComponent(
+            'Somebody in the league already goes by that. Pick another.'));
+        }
+
+        await db.query('update players set name = $2 where id = $1',
+          [req.player.id, name]);
+
+        res.redirect('/me?ok=' + encodeURIComponent('That is you now.'));
+      } catch (err) {
+        next(err);
+      }
+    });
 
   return r;
 }
