@@ -183,3 +183,15 @@
     }
   });
 }());
+
+
+/* Fill in whichever header link points at the page you are on. Done here
+   rather than server side so every view gets it without being touched. */
+(function () {
+  'use strict';
+  var here = location.pathname.replace(/\/+$/, '') || '/';
+  document.querySelectorAll('.bar__back, .bar__admin').forEach(function (a) {
+    var href = (a.getAttribute('href') || '').replace(/\/+$/, '') || '/';
+    if (href === here) a.classList.add('is-here');
+  });
+}());
