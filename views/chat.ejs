@@ -1,0 +1,62 @@
+<%- include('partials/head', { title: 'Chat - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="bar">
+    <a class="bar__back" href="/">All rounds</a>
+    <a class="bar__back" href="/chat">Chat</a>
+    <span class="bar__name"><%= player.name %></span>
+  </header>
+
+  <main class="panel chatpage">
+
+    <h1 class="chat__title">The room</h1>
+
+    <div class="chat" id="chat" data-newest="<%= newest %>">
+
+      <% if (hasMore) { %>
+        <button class="chat__more" type="button">Load older</button>
+      <% } %>
+
+      <ol class="chat__log" id="chatlog">
+        <% messages.forEach(function (m) { %>
+          <li class="msg <%= m.mine ? 'msg--mine' : '' %> <%= m.deleted ? 'msg--gone' : '' %>"
+              data-id="<%= m.id %>">
+            <% if (m.deleted) { %>
+              <p class="msg__body msg__body--gone">message removed</p>
+            <% } else { %>
+              <p class="msg__meta">
+                <span class="msg__who"><%= m.name %></span>
+                <time class="msg__when" datetime="<%= m.at.toISOString() %>"></time>
+                <% if (m.canRemove) { %>
+                  <button class="msg__x" type="button" aria-label="Remove">&times;</button>
+                <% } %>
+              </p>
+              <p class="msg__body"><%= m.body %></p>
+            <% } %>
+          </li>
+        <% }) %>
+      </ol>
+
+      <p class="chat__empty" <%= messages.length ? 'hidden' : '' %>>
+        Nothing here yet. Go on.
+      </p>
+
+    </div>
+
+    <form class="chat__form" id="chatform">
+      <textarea class="chat__box" id="chatbox" rows="2" maxlength="2000"
+                placeholder="Say something" autocomplete="off"></textarea>
+      <button class="button" type="submit">Send</button>
+      <p class="chat__state" id="chatstate"></p>
+    </form>
+
+    <p class="fineprint">
+      Everyone in the league sees this, with your name on it. Not anonymous,
+      unlike the comments on songs. Careful what you give away about your
+      own picks before a round is revealed.
+    </p>
+
+  </main>
+
+<script src="/chat.js?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : '1' %>" defer></script>
+
+<%- include('partials/foot') %>

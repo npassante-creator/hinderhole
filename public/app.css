@@ -1651,3 +1651,165 @@ a.chip:hover {
 /* On the cream strips the same links need dark ink. */
 .strip--message a { color: var(--oxblood); }
 .strip--message a:hover { color: var(--ink); }
+
+/* ---------------------------------------------------------------
+   The room
+   --------------------------------------------------------------- */
+
+.chatpage { padding-bottom: 8rem; }
+
+.chat__title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  margin: 0 0 1rem;
+}
+
+.chat__more {
+  display: block;
+  margin: 0 auto 1rem;
+  font-family: var(--util);
+  font-size: .66rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--steel);
+  background: transparent;
+  border: 1px solid rgba(240, 232, 216, .22);
+  border-radius: 2px;
+  padding: .4rem .7rem;
+  cursor: pointer;
+}
+
+.chat__more:hover { color: var(--stock); border-color: var(--stock); }
+
+.chat__log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.msg {
+  padding: .55rem 0;
+  border-bottom: 1px solid rgba(240, 232, 216, .08);
+}
+
+.msg__meta {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  margin: 0 0 .15rem;
+}
+
+.msg__who {
+  font-family: var(--util);
+  font-size: .68rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.msg--mine .msg__who { color: var(--stock); }
+
+.msg__when {
+  font-family: var(--util);
+  font-size: .62rem;
+  color: var(--steel);
+}
+
+.msg__x {
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  color: var(--steel);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 .2rem;
+  opacity: 0;
+  transition: opacity .12s ease, color .12s ease;
+}
+
+.msg:hover .msg__x,
+.msg__x:focus-visible { opacity: 1; }
+.msg__x:hover { color: var(--oxblood); }
+
+/* Touch has no hover, so the control has to be there already. */
+@media (pointer: coarse) {
+  .msg__x { opacity: .5; }
+}
+
+.msg__body {
+  margin: 0;
+  font-size: .95rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg__body--gone {
+  font-family: var(--util);
+  font-size: .68rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--steel);
+  font-style: normal;
+}
+
+.chat__empty {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--steel);
+  font-family: var(--util);
+  font-size: .72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* The composer sits at the bottom of the screen, where a composer goes. */
+.chat__form {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 8;
+  display: flex;
+  align-items: flex-end;
+  gap: .5rem;
+  padding: .7rem max(1rem, calc(50vw - 21rem)) calc(.7rem + env(safe-area-inset-bottom));
+  background: var(--field);
+  border-top: 1px solid rgba(240, 232, 216, .16);
+}
+
+.chat__box {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  font-family: var(--body);
+  font-size: 16px;           /* anything smaller makes iOS zoom on focus */
+  line-height: 1.4;
+  padding: .55rem .7rem;
+  background: var(--field-2);
+  border: 1px solid rgba(240, 232, 216, .22);
+  border-radius: var(--strip-radius);
+  color: var(--stock);
+}
+
+.chat__box:focus {
+  outline: none;
+  border-color: var(--amber);
+}
+
+.chat__form .button { flex: none; }
+
+.chat__state {
+  position: absolute;
+  top: -1.3rem;
+  left: max(1rem, calc(50vw - 21rem));
+  margin: 0;
+  font-family: var(--util);
+  font-size: .64rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
