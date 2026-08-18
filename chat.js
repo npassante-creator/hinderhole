@@ -17,11 +17,38 @@
 const express = require('express');
 const { requireAuth } = require('./auth');
 const giphy = require('./giphy');
+const fsp = require('fs/promises');
+const path = require('path');
+const crypto = require('crypto');
+const multer = require('multer');
 
 const PAGE = 60;              // messages loaded at once
 const MAX_LEN = 2000;
 const RATE_WINDOW_S = 30;
 const RATE_MAX = 12;          // messages per window, per person
+
+const MEDIA_DIR = process.env.MEDIA_DIR || '/var/lib/hinderhole/media';
+const CHAT_DIR = path.join(MEDIA_DIR, 'chat');
+
+// The browser shrinks photos before sending, so this is a backstop
+// against someone posting a raw camera file or something worse.
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_IMAGE_BYTES, files: 1 },
+});
+
+/** Read the first bytes rather than trusting the name or the browser. */
+function sniffImage(buf) {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return '.jpg';
+  if (buf[0] === 0x89 && buf.slice(1, 4).toString('ascii') === 'PNG') return '.png';
+  if (buf.slice(0, 3).toString('ascii') === 'GIF') return '.gif';
+  if (buf.slice(0, 4).toString('ascii') === 'RIFF' &&
+      buf.slice(8, 12).toString('ascii') === 'WEBP') return '.webp';
+  return null;
+}
 
 function router(db) {
   const r = express.Router();
@@ -177,7 +204,11 @@ function router(db) {
 
       // Whatever the browser sends is checked here, not trusted. Only
       // Giphy's own hosts can ever end up rendered in a message.
-      if (media && !giphy.isAllowed(String(media.url || ''))) {
+      // Two kinds of media are legal: a Giphy url, or a key we issued
+      // ourselves from /chat/upload. Nothing else.
+      const isUpload = media && /^\/chat\/media\/[a-f0-9]{32}\.[a-z]{3,4}$/
+        .test(String(media.url || ''));
+      if (media && !isUpload && !giphy.isAllowed(String(media.url || ''))) {
         return res.status(400).json({ error: 'That image is not allowed.' });
       }
       if (!body && !media) {
@@ -206,7 +237,7 @@ function router(db) {
         [
           req.league.id, req.player.id, body || null,
           media ? String(media.url) : null,
-          media ? 'gif' : null,
+          media ? (isUpload ? 'image' : 'gif') : null,
           media && Number(media.w) ? Number(media.w) : null,
           media && Number(media.h) ? Number(media.h) : null,
           media ? String(media.alt || 'GIF').slice(0, 200) : null,
@@ -224,7 +255,7 @@ function router(db) {
           canRemove: true,
           media: media ? {
             url: String(media.url),
-            kind: 'gif',
+            kind: isUpload ? 'image' : 'gif',
             w: Number(media.w) || null,
             h: Number(media.h) || null,
             alt: String(media.alt || 'GIF'),
@@ -254,6 +285,74 @@ function router(db) {
         next(err);
       }
     });
+
+  // ---------------------------------------------------------------
+  // Uploaded images
+  // ---------------------------------------------------------------
+
+  r.post('/chat/upload', requireAuth, loadLeague, (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          error: err.code === 'LIMIT_FILE_SIZE'
+            ? 'That image is too big.'
+            : 'Could not read that file.',
+        });
+      }
+      next();
+    });
+  }, async (req, res, next) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file.' });
+
+      const ext = sniffImage(req.file.buffer);
+      if (!ext) {
+        return res.status(400).json({
+          error: 'That does not look like an image inside, whatever it is named.',
+        });
+      }
+
+      await fsp.mkdir(CHAT_DIR, { recursive: true });
+      const key = crypto.randomBytes(16).toString('hex') + ext;
+      await fsp.writeFile(path.join(CHAT_DIR, key), req.file.buffer,
+        { mode: 0o640 });
+
+      res.json({
+        ok: true,
+        url: `/chat/media/${key}`,
+        w: Number(req.body.w) || null,
+        h: Number(req.body.h) || null,
+        alt: 'Image',
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /** Behind auth, because a league's chat is not public. */
+  r.get('/chat/media/:key', requireAuth, loadLeague, async (req, res) => {
+    const key = String(req.params.key);
+    if (!/^[a-f0-9]{32}\.[a-z]{3,4}$/.test(key)) return res.status(404).end();
+
+    const { rows } = await db.query(
+      `select 1 from messages
+        where league_id = $1 and media_url = $2 limit 1`,
+      [req.league.id, `/chat/media/${key}`]
+    );
+    // A just-uploaded image has no message row yet, so let the uploader
+    // see their own preview.
+    if (!rows[0]) {
+      try {
+        await fsp.access(path.join(CHAT_DIR, key));
+      } catch {
+        return res.status(404).end();
+      }
+    }
+
+    res.sendFile(path.join(CHAT_DIR, key), {
+      headers: { 'Cache-Control': 'private, max-age=604800' },
+    }, (err) => { if (err && !res.headersSent) res.status(404).end(); });
+  });
 
   // ---------------------------------------------------------------
   // The GIF picker's data source

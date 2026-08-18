@@ -347,6 +347,89 @@
     if (old) old.remove();
   }
 
+  // ---- attaching an image ---------------------------------------
+  //
+  // Phone photos are three to five megabytes. Shrinking in the browser
+  // before sending means less waiting on a phone signal and no image
+  // library on the server. Animated GIFs are sent untouched, because
+  // drawing one to a canvas would flatten it to the first frame.
+
+  var imgBtn = document.getElementById('imgbtn');
+  var imgInput = document.getElementById('imginput');
+
+  if (imgBtn && imgInput) {
+    imgBtn.addEventListener('click', function () { imgInput.click(); });
+
+    imgInput.addEventListener('change', function () {
+      var file = imgInput.files && imgInput.files[0];
+      imgInput.value = '';
+      if (!file) return;
+      if (!/^image\//.test(file.type)) {
+        state.textContent = 'That is not an image.';
+        return;
+      }
+      state.textContent = 'preparing';
+      shrink(file).then(upload).catch(function (err) {
+        state.textContent = err.message || 'Could not read that image.';
+      });
+    });
+  }
+
+  function shrink(file) {
+    // Animated GIFs and anything already small go up as they are.
+    if (file.type === 'image/gif' || file.size < 400 * 1024) {
+      return Promise.resolve({ blob: file, w: null, h: null });
+    }
+
+    var MAX = 1600;
+    // from-image so a photo taken sideways does not arrive sideways.
+    return createImageBitmap(file, { imageOrientation: 'from-image' })
+      .then(function (bmp) {
+        var scale = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+        var w = Math.round(bmp.width * scale);
+        var h = Math.round(bmp.height * scale);
+
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+        bmp.close && bmp.close();
+
+        return new Promise(function (done, fail) {
+          canvas.toBlob(function (blob) {
+            if (blob) done({ blob: blob, w: w, h: h });
+            else fail(new Error('Could not process that image.'));
+          }, 'image/jpeg', 0.82);
+        });
+      })
+      .catch(function () {
+        // Older browser, or a format createImageBitmap will not decode.
+        return { blob: file, w: null, h: null };
+      });
+  }
+
+  function upload(prepared) {
+    var fd = new FormData();
+    fd.append('image', prepared.blob, 'upload');
+    if (prepared.w) fd.append('w', prepared.w);
+    if (prepared.h) fd.append('h', prepared.h);
+
+    state.textContent = 'uploading';
+    return fetch('/chat/upload', { method: 'POST', body: fd })
+      .then(function (r) {
+        return r.json().then(function (d) {
+          if (!r.ok) throw new Error(d.error || 'Upload failed.');
+          return d;
+        });
+      })
+      .then(function (d) {
+        state.textContent = '';
+        pending = { url: d.url, w: d.w, h: d.h, alt: 'Image' };
+        showPending({ url: d.url, alt: 'Image' });
+        box.focus();
+      });
+  }
+
   paintTimes();
   toBottom();
   schedule();

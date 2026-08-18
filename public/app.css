@@ -1965,3 +1965,28 @@ a.chip:hover {
 }
 
 .gif__drop:hover { color: var(--oxblood); border-color: var(--oxblood); }
+
+/* Uploaded images in chat share the GIF bubble sizing. */
+.msg__gif { image-orientation: from-image; }
+
+.img__btn {
+  flex: none;
+  align-self: stretch;
+  font-family: var(--util);
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 0 .7rem;
+  background: transparent;
+  color: var(--steel);
+  border: 1px solid rgba(240, 232, 216, .22);
+  border-radius: var(--strip-radius);
+  cursor: pointer;
+}
+
+.img__btn:hover { color: var(--amber); border-color: var(--amber); }
+
+@media (max-width: 30rem) {
+  .gif__btn,
+  .img__btn { padding: 0 .5rem; font-size: .6rem; }
+}
