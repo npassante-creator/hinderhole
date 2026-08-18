@@ -30,7 +30,15 @@
                   <button class="msg__x" type="button" aria-label="Remove">&times;</button>
                 <% } %>
               </p>
-              <p class="msg__body"><%= m.body %></p>
+              <% if (m.body) { %>
+                <p class="msg__body"><%= m.body %></p>
+              <% } %>
+              <% if (m.media && m.media.url) { %>
+                <img class="msg__gif" src="<%= m.media.url %>"
+                     alt="<%= m.media.alt || 'Image' %>" loading="lazy"
+                     <% if (m.media.w) { %>width="<%= m.media.w %>"<% } %>
+                     <% if (m.media.h) { %>height="<%= m.media.h %>"<% } %>>
+              <% } %>
             <% } %>
           </li>
         <% }) %>
