@@ -287,6 +287,29 @@ function router(db) {
     });
 
   // ---------------------------------------------------------------
+  // How much you have missed
+  // ---------------------------------------------------------------
+
+  r.get('/chat/unread', requireAuth, loadLeague, async (req, res) => {
+    try {
+      const { rows } = await db.query(
+        `select count(*)::int as n
+           from messages m
+           left join chat_reads c
+                  on c.league_id = m.league_id and c.player_id = $2
+          where m.league_id = $1
+            and m.deleted_at is null
+            and m.player_id <> $2
+            and m.id > coalesce(c.last_seen, 0)`,
+        [req.league.id, req.player.id]
+      );
+      res.json({ unread: rows[0].n });
+    } catch (err) {
+      res.json({ unread: 0 });
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Uploaded images
   // ---------------------------------------------------------------
 

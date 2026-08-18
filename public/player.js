@@ -195,3 +195,41 @@
     if (href === here) a.classList.add('is-here');
   });
 }());
+
+
+/* Unread count on whichever header link points at the chat. Lives here
+   because player.js is on every page, so no template needs touching. */
+(function () {
+  'use strict';
+
+  var link = document.querySelector('a[href="/chat"]');
+  if (!link) return;
+
+  // Pointless while you are sitting in the room reading it.
+  if (location.pathname.replace(/\/+$/, '') === '/chat') return;
+
+  function paint(n) {
+    var badge = link.querySelector('.chat__badge');
+    if (!n) { if (badge) badge.remove(); return; }
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'chat__badge';
+      link.appendChild(badge);
+    }
+    badge.textContent = n > 99 ? '99+' : String(n);
+  }
+
+  function check() {
+    if (document.hidden) return;
+    fetch('/chat/unread', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d) paint(d.unread); })
+      .catch(function () { /* offline, no badge, no harm */ });
+  }
+
+  check();
+  setInterval(check, 60000);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) check();
+  });
+}());

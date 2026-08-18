@@ -1990,3 +1990,23 @@ a.chip:hover {
   .gif__btn,
   .img__btn { padding: 0 .5rem; font-size: .6rem; }
 }
+
+/* Unread count riding on the Chat link. */
+.chat__badge {
+  display: inline-block;
+  margin-left: .4rem;
+  padding: .08rem .32rem;
+  font-family: var(--util);
+  font-size: .58rem;
+  line-height: 1.5;
+  letter-spacing: .04em;
+  border-radius: 999px;
+  background: var(--oxblood);
+  color: var(--stock);
+  vertical-align: baseline;
+}
+
+.bar__back.is-here .chat__badge {
+  background: var(--field);
+  color: var(--amber);
+}
