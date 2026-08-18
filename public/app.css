@@ -1813,3 +1813,20 @@ a.chip:hover {
   text-transform: uppercase;
   color: var(--amber);
 }
+
+/* The base button is full width, which flattens the composer. Not here. */
+.chat__form .button {
+  flex: none;
+  width: auto;
+  min-width: 5.5rem;
+  align-self: stretch;
+  margin: 0;
+}
+
+.chat__form .chat__box {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 2.75rem;
+  max-height: 40vh;
+}
