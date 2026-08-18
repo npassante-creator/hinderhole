@@ -42,9 +42,23 @@
 
     </div>
 
+    <% if (gifsOn) { %>
+      <div class="gif__picker" id="gifpicker" hidden>
+        <input class="gif__search" type="search" placeholder="Search GIFs"
+               autocomplete="off" aria-label="Search GIFs">
+        <div class="gif__grid"></div>
+        <p class="gif__state"></p>
+        <p class="gif__credit">Powered by GIPHY</p>
+      </div>
+    <% } %>
+
     <form class="chat__form" id="chatform">
       <textarea class="chat__box" id="chatbox" rows="2" maxlength="2000"
                 placeholder="Say something" autocomplete="off"></textarea>
+      <% if (gifsOn) { %>
+        <button class="gif__btn" id="gifbtn" type="button"
+                aria-expanded="false">GIF</button>
+      <% } %>
       <button class="button" type="submit">Send</button>
       <p class="chat__state" id="chatstate"></p>
     </form>
