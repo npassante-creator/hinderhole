@@ -2073,3 +2073,13 @@ a.chip:hover {
   .cand__art { width: 48px; height: 36px; }
   .cand__acts { flex-direction: row; }
 }
+
+/* Shortlist groups on My picks. */
+.saved__round {
+  font-family: var(--util);
+  font-size: .68rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin: 1.1rem 0 .2rem;
+}

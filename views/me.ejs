@@ -2,6 +2,7 @@
 
   <header class="bar">
     <a class="bar__back" href="/">All rounds</a>
+    <a class="bar__back" href="/upcoming">Coming up</a>
     <span class="bar__name"><%= player.name %></span>
   </header>
 
@@ -48,6 +49,55 @@
         </div>
       <% } %>
     </dl>
+
+    <% if (typeof savedByRound !== 'undefined' && savedByRound.length) { %>
+      <h2 class="rack__heading">Saved for later</h2>
+      <% savedByRound.forEach(function (g) { %>
+        <p class="saved__round">
+          Round <%= String(g.round_number).padStart(2, '0') %> &middot;
+          <%= g.category %>
+          <% if (g.status === 'submitting') { %>
+            <span class="tag tag--gave">open now</span>
+          <% } %>
+        </p>
+        <ul class="shortlist__items">
+          <% g.items.forEach(function (c) { %>
+            <li class="cand">
+              <% if (c.thumbnail_url) { %>
+                <img class="cand__art" src="<%= c.thumbnail_url %>" alt="" loading="lazy">
+              <% } %>
+              <div class="cand__body">
+                <p class="cand__title"><%= c.title || 'Untitled' %></p>
+                <p class="cand__artist"><%= c.artist || 'Unknown artist' %></p>
+                <% if (c.note) { %><p class="cand__note"><%= c.note %></p><% } %>
+              </div>
+              <div class="cand__acts">
+                <% if (g.status === 'submitting') { %>
+                  <form method="post" action="/shortlist/item/<%= c.id %>/use">
+                    <button class="chip chip--on" type="submit">use this</button>
+                  </form>
+                <% } %>
+                <form method="post" action="/shortlist/item/<%= c.id %>/remove">
+                  <button class="chip chip--danger" type="submit">drop</button>
+                </form>
+              </div>
+            </li>
+          <% }) %>
+        </ul>
+      <% }) %>
+      <p class="fineprint">
+        Only you can see these. Add more from
+        <a href="/upcoming">Coming up</a>.
+      </p>
+    <% } else { %>
+      <p class="fineprint">
+        Heard something that would suit a later round? Save it from
+        <a href="/upcoming">Coming up</a> and it will be waiting when that
+        week arrives.
+      </p>
+    <% } %>
+
+    <h2 class="rack__heading">Every round</h2>
 
     <ol class="results">
       <% picks.forEach(function (p) { %>

@@ -94,7 +94,36 @@ function router(db) {
         return pl && Number(pl.place) === 1;
       }).length;
 
+      // Saved candidates for rounds that have not finished. Owner only.
+      const { rows: savedRows } = await db.query(
+        `select s.*, r.round_number, r.title as category, r.status
+           from shortlist s
+           join rounds r on r.id = s.round_id
+          where s.player_id = $1
+            and r.league_id = $2
+            and r.status <> 'revealed'
+          order by r.round_number, s.created_at`,
+        [req.player.id, lg.id]
+      );
+
+      const savedByRound = [];
+      savedRows.forEach((row) => {
+        let group = savedByRound.find((g) => g.round_id === row.round_id);
+        if (!group) {
+          group = {
+            round_id: row.round_id,
+            round_number: row.round_number,
+            category: row.category,
+            status: row.status,
+            items: [],
+          };
+          savedByRound.push(group);
+        }
+        group.items.push(row);
+      });
+
       res.render('me', {
+        savedByRound,
         league: lg,
         error: req.query.err || null,
         notice: req.query.ok || null,
