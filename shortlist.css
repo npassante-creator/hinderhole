@@ -1,0 +1,63 @@
+
+/* ---------------------------------------------------------------
+   Shortlist: songs saved for a round that has not opened yet
+   --------------------------------------------------------------- */
+
+.shortlist__items {
+  list-style: none;
+  margin: .5rem 0 1rem;
+  padding: 0;
+}
+
+.cand {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+  padding: .6rem 0;
+  border-bottom: 1px solid rgba(240, 232, 216, .1);
+}
+
+.cand__art {
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 2px;
+  background: var(--field-2);
+  flex: none;
+}
+
+.cand__body { flex: 1; min-width: 0; }
+
+.cand__title {
+  margin: 0;
+  font-weight: 600;
+  font-size: .92rem;
+  line-height: 1.25;
+}
+
+.cand__artist {
+  margin: .1rem 0 0;
+  font-size: .8rem;
+  color: var(--steel);
+}
+
+.cand__note {
+  margin: .25rem 0 0;
+  font-size: .78rem;
+  font-style: italic;
+  color: var(--steel);
+}
+
+.cand__acts {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  flex: none;
+}
+
+.cand__acts form { display: block; }
+
+@media (max-width: 30rem) {
+  .cand__art { width: 48px; height: 36px; }
+  .cand__acts { flex-direction: row; }
+}
