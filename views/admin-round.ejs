@@ -65,6 +65,24 @@
       </p>
     </div>
 
+    <% if (typeof clashes !== 'undefined' && clashes.length) { %>
+      <h2 class="rack__heading">Possible duplicates</h2>
+      <div class="echo">
+        <span class="echo__label">Two people, one song</span>
+        <ul class="echo__list">
+          <% clashes.forEach(function (c) { %>
+            <li>
+              <strong><%= c.a_player %></strong> (<%= c.a_title %>)
+              and <strong><%= c.b_player %></strong> (<%= c.b_title %>)
+              <span class="echo__how"><%= c.how %></span>
+            </li>
+          <% }) %>
+        </ul>
+        Nobody else can see this. Matching is fuzzy, so check before you
+        say anything.
+      </div>
+    <% } %>
+
     <h2 class="rack__heading">Who is in</h2>
     <table class="grid">
       <thead>

@@ -2083,3 +2083,23 @@ a.chip:hover {
   color: var(--steel);
   margin: 1.1rem 0 .2rem;
 }
+
+.echo__list {
+  list-style: none;
+  margin: .4rem 0;
+  padding: 0;
+}
+
+.echo__list li {
+  padding: .25rem 0;
+  line-height: 1.45;
+}
+
+.echo__how {
+  font-family: var(--util);
+  font-size: .6rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-left: .3rem;
+}

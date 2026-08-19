@@ -74,10 +74,18 @@
         <% if (typeof echo !== 'undefined' && echo.length) { %>
           <div class="echo">
             <span class="echo__label">Played before</span>
-            <% echo.forEach(function (e) { %>
-              Round <%= e.round_number %>, <%= e.round_title %>, submitted by <%= e.submitted_by %>.
-            <% }) %>
-            Still allowed, but people will notice.
+            <ul class="echo__list">
+              <% echo.forEach(function (e) { %>
+                <li>
+                  <strong><%= e.song_title %></strong>,
+                  round <%= e.round_number %> (<%= e.round_title %>),
+                  submitted by <%= e.submitted_by %>.
+                  <span class="echo__how"><%= e.how %></span>
+                </li>
+              <% }) %>
+            </ul>
+            Still allowed, and the match is not always right. But people
+            will notice.
           </div>
         <% } %>
 

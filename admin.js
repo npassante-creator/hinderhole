@@ -281,9 +281,16 @@ function router(db) {
           [req.round.id, req.league.id]
         );
 
+        // Two people on the same song. Players must not be told during a
+        // live round, so this is the commissioner's problem to spot.
+        const { rows: clashes } = await db.query(
+          'select * from round_collisions($1)', [req.round.id]
+        );
+
         res.render('admin-round', {
           league: req.league,
           round: req.round,
+          clashes,
           bumps: Object.entries(BUMPS).map(([key, label]) => ({ key, label })),
           people: people.map((x) => ({
             ...x,
