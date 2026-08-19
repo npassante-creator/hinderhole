@@ -12,6 +12,13 @@
 
   <main class="panel">
 
+    <% if (typeof error !== 'undefined' && error) { %>
+      <p class="notice notice--bad"><%= error %></p>
+    <% } %>
+    <% if (typeof notice !== 'undefined' && notice) { %>
+      <p class="notice notice--good"><%= notice %></p>
+    <% } %>
+
     <ol class="ideas">
       <% rounds.forEach(function (r) { %>
         <li class="idea <%= r.status === 'submitting' ? 'idea--top' : '' %>">
@@ -28,7 +35,71 @@
             <% } else { %>
               <%= r.status %> &middot; songs <%= r.songsDue %> &middot; votes <%= r.votesDue %>
             <% } %>
+            <% if (r.saved.length) { %>
+              &middot; <%= r.saved.length %> saved
+            <% } %>
           </p>
+
+          <% if (r.status !== 'revealed') { %>
+            <details class="drawer shortlist">
+              <summary class="drawer__summary">
+                Your shortlist<% if (r.saved.length) { %> (<%= r.saved.length %>)<% } %>
+              </summary>
+
+              <% if (r.saved.length) { %>
+                <ul class="shortlist__items">
+                  <% r.saved.forEach(function (c) { %>
+                    <li class="cand">
+                      <% if (c.thumbnail_url) { %>
+                        <img class="cand__art" src="<%= c.thumbnail_url %>" alt="" loading="lazy">
+                      <% } %>
+                      <div class="cand__body">
+                        <p class="cand__title"><%= c.title || 'Untitled' %></p>
+                        <p class="cand__artist"><%= c.artist || 'Unknown artist' %></p>
+                        <% if (c.note) { %><p class="cand__note"><%= c.note %></p><% } %>
+                      </div>
+                      <div class="cand__acts">
+                        <% if (r.status === 'submitting') { %>
+                          <form method="post" action="/shortlist/item/<%= c.id %>/use">
+                            <button class="chip chip--on" type="submit">use this</button>
+                          </form>
+                        <% } %>
+                        <form method="post" action="/shortlist/item/<%= c.id %>/remove">
+                          <button class="chip chip--danger" type="submit">drop</button>
+                        </form>
+                      </div>
+                    </li>
+                  <% }) %>
+                </ul>
+              <% } %>
+
+              <% if (r.saved.length < maxSaved) { %>
+                <form class="strip strip--form" method="post"
+                      action="/shortlist/<%= r.id %>">
+                  <label class="field">
+                    <span class="field__label">Save a song for this one</span>
+                    <input class="field__input" type="url" name="url"
+                           placeholder="https://youtu.be/..." required>
+                  </label>
+                  <label class="field">
+                    <span class="field__label">Note to yourself (optional)</span>
+                    <input class="field__input" type="text" name="note"
+                           maxlength="200">
+                  </label>
+                  <button class="button" type="submit">Save it</button>
+                </form>
+              <% } else { %>
+                <p class="fineprint">
+                  That is <%= maxSaved %>. Drop one to add another.
+                </p>
+              <% } %>
+
+              <p class="fineprint">
+                Only you can see this. Nothing here is submitted until you
+                pick one.
+              </p>
+            </details>
+          <% } %>
         </li>
       <% }) %>
     </ol>

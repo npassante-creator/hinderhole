@@ -14,6 +14,7 @@
 const express = require('express');
 const { resolve, UnsupportedSourceError } = require('./resolver');
 const { requireAuth } = require('./auth');
+const shortlist = require('./shortlist');
 
 const CT = 'America/Chicago';
 
@@ -97,9 +98,14 @@ function router(db) {
       [req.round.id, req.round.league_id]
     );
 
+    const savedMap = await shortlist.forPlayer(
+      db, req.player.id, [req.round.id]);
+
     res.render('round', {
       round: req.round,
       submission,
+      saved: savedMap.get(String(req.round.id)) || [],
+      maxSaved: shortlist.MAX_PER_ROUND,
       echo,
       submitBy: formatDeadline(req.round.submit_deadline),
       voteBy: formatDeadline(req.round.vote_deadline),

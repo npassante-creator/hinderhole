@@ -16,6 +16,7 @@
 
 const express = require('express');
 const { requireAuth } = require('./auth');
+const shortlist = require('./shortlist');
 
 const CT = 'America/Chicago';
 
@@ -256,12 +257,19 @@ function router(db) {
         [lg.id]
       );
 
+      const saved = await shortlist.forPlayer(
+        db, req.player.id, rows.map((x) => x.id));
+
       res.render('upcoming', {
         league: lg,
+        maxSaved: shortlist.MAX_PER_ROUND,
+        error: req.query.err || null,
+        notice: req.query.ok || null,
         rounds: rows.map((x) => ({
           ...x,
           songsDue: fmtDate(x.submit_deadline),
           votesDue: fmtDate(x.vote_deadline),
+          saved: saved.get(String(x.id)) || [],
         })),
       });
     } catch (err) {

@@ -155,6 +155,38 @@
 
       <% } else { %>
 
+        <% if (typeof saved !== 'undefined' && saved.length) { %>
+          <h2 class="rack__heading">From your shortlist</h2>
+          <ul class="shortlist__items">
+            <% saved.forEach(function (c) { %>
+              <li class="cand">
+                <% if (c.thumbnail_url) { %>
+                  <img class="cand__art" src="<%= c.thumbnail_url %>" alt="" loading="lazy">
+                <% } %>
+                <div class="cand__body">
+                  <p class="cand__title"><%= c.title || 'Untitled' %></p>
+                  <p class="cand__artist"><%= c.artist || 'Unknown artist' %></p>
+                  <% if (c.note) { %><p class="cand__note"><%= c.note %></p><% } %>
+                </div>
+                <div class="cand__acts">
+                  <form method="post" action="/shortlist/item/<%= c.id %>/use">
+                    <input type="hidden" name="from" value="round">
+                    <button class="chip chip--on" type="submit">use this</button>
+                  </form>
+                  <form method="post" action="/shortlist/item/<%= c.id %>/remove">
+                    <input type="hidden" name="from" value="round">
+                    <button class="chip chip--danger" type="submit">drop</button>
+                  </form>
+                </div>
+              </li>
+            <% }) %>
+          </ul>
+          <p class="fineprint">
+            Saved earlier, only visible to you. Using one fills in your pick,
+            and you can still change it before the deadline.
+          </p>
+        <% } %>
+
         <h2 class="rack__heading">Submit a song</h2>
 
         <form class="strip strip--form" method="post" action="/round/<%= round.id %>/submit">
