@@ -1,50 +1,44 @@
 -- Music League: catching the same song under a different link
 --
--- Matching on the YouTube id only catches a literal repost. With obscure
--- music there are five uploads of the same track, plus live versions,
--- remasters, and lyric videos.
---
--- So: normalise artist and title into a fingerprint, and keep trigram
--- similarity as a second net for the near misses.
---
--- This will never be perfect. The metadata is guessed off freeform
--- YouTube titles. It is a warning for a human to judge, never a block.
+-- Re-runnable. The earlier attempt failed because create-or-replace
+-- cannot change a function's output columns, so the old signatures are
+-- dropped explicitly first.
 
 begin;
 
 create extension if not exists pg_trgm;
 
+-- The old two-column version has to go before the five-column one can
+-- take its name.
+drop function if exists song_seen_before(bigint, text, bigint);
+drop function if exists round_collisions(bigint);
+
 /**
  * Strip a title down to something comparable.
  *
- * "Radiohead - Idioteque (Official Video) [HD]"  -> radioheadidioteque
- * "Idioteque - Radiohead (Live at Glastonbury)"  -> idiotequeradiohead
+ *   "Radiohead - Idioteque (Official Video)" -> radioheadidioteque
+ *   "Idioteque [Live 2001] - Radiohead"      -> idiotequeradiohead
  *
- * Note the last two sort differently. That is what the trigram check is
- * for: this function catches the tidy cases, similarity catches the rest.
+ * Those two sort differently, which is what the trigram check is for:
+ * this catches the tidy cases, similarity catches the rest.
  */
 create or replace function song_key(p_artist text, p_title text)
 returns text as $$
   select nullif(
     regexp_replace(
       lower(
-        -- Drop anything in brackets: (Official Video), [HD], (Remastered)
         regexp_replace(
           coalesce(p_artist, '') || ' ' || coalesce(p_title, ''),
           '[\(\[\{][^\)\]\}]*[\)\]\}]', ' ', 'g')
-      ),
-      -- Then the noise words that survive outside brackets, and finally
-      -- everything that is not a letter or a number.
+        ),
       '\m(official|video|audio|lyrics?|lyric|hd|hq|4k|remaster(ed)?|' ||
       'live|version|full|album|single|feat|ft|featuring|with|the|a|an|' ||
-      'explicit|clean|mv|m/v|visualizer)\M|[^a-z0-9]',
+      'explicit|clean|mv|visualizer)\M|[^a-z0-9]',
       '', 'g'
     ), '');
 $$ language sql immutable;
 
 
--- Stored rather than computed on the fly, so it can be indexed and so a
--- later change to song_key does not silently reinterpret history.
 alter table submissions
   add column if not exists song_key text;
 
@@ -73,18 +67,11 @@ create trigger submissions_key
 
 
 -- ---------------------------------------------------------------
--- The lookup
+-- What a player is told
 -- ---------------------------------------------------------------
---
--- Three ways a song counts as seen before, loosest last:
---   1. the same link
---   2. the same normalised key
---   3. a normalised key that is close enough
---
--- Only looks at rounds that have been revealed, so a player can never
--- learn anything about a round still in play.
+-- Revealed rounds only, so nothing about a live round can leak.
 
-create or replace function song_seen_before(
+create function song_seen_before(
   p_league_id bigint, p_external_id text, p_round_id bigint
 ) returns table (
   round_number smallint, round_title text, submitted_by text,
@@ -120,14 +107,11 @@ $$ language sql stable;
 
 
 -- ---------------------------------------------------------------
--- The commissioner's view
+-- What the commissioner is told
 -- ---------------------------------------------------------------
---
--- Two people picking the same song in the same round is the case players
--- must not be told about, since submissions are secret until voting. The
--- commissioner can see it and sort it out quietly.
+-- Two people on one song in a live round. Players must never see this.
 
-create or replace function round_collisions(p_round_id bigint)
+create function round_collisions(p_round_id bigint)
 returns table (
   a_player text, a_title text, b_player text, b_title text, how text
 ) as $$
