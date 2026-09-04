@@ -14,6 +14,7 @@
 const express = require('express');
 const { resolve, UnsupportedSourceError } = require('./resolver');
 const { requireAuth } = require('./auth');
+const dupecheck = require('./dupecheck');
 const shortlist = require('./shortlist');
 
 const CT = 'America/Chicago';
@@ -158,6 +159,12 @@ function router(db) {
             'Could not read that link. Check that the video is public and ' +
             'try again.',
         });
+      }
+
+      const clash = await dupecheck.taken(
+        db, req.round.id, req.player.id, track);
+      if (clash) {
+        return renderRound(req, res, { error: clash });
       }
 
       const late = isPastDeadline(req.round);

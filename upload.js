@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const express = require('express');
 const multer = require('multer');
 const { requireAuth } = require('./auth');
+const dupecheck = require('./dupecheck');
 
 const MEDIA_DIR = process.env.MEDIA_DIR || '/var/lib/hinderhole/media';
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -173,6 +174,16 @@ function router(db) {
           where round_id = $1 and player_id = $2 and source = 'upload'`,
         [round.id, req.player.id]
       );
+
+      const clash = await dupecheck.taken(db, round.id, req.player.id, {
+        external_id: null,
+        artist: String(req.body.artist || '').trim() || null,
+        title,
+      });
+      if (clash) {
+        return res.redirect(`/round/${round.id}?err=` +
+          encodeURIComponent(clash));
+      }
 
       const late = Boolean(round.submit_deadline &&
         Date.now() > round.submit_deadline.getTime());

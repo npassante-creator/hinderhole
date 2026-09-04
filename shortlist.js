@@ -18,6 +18,7 @@
 const express = require('express');
 const { resolve, UnsupportedSourceError } = require('./resolver');
 const { requireAuth } = require('./auth');
+const dupecheck = require('./dupecheck');
 
 const MAX_PER_ROUND = 12;
 
@@ -165,6 +166,13 @@ function router(db) {
             encodeURIComponent(pick.status === 'draft'
               ? 'That round has not opened yet.'
               : 'Submissions for that round are closed.')));
+        }
+
+        const clash = await dupecheck.taken(
+          db, pick.round_id, req.player.id, pick);
+        if (clash) {
+          return res.redirect(back(req, pick.round_id,
+            'err=' + encodeURIComponent(clash)));
         }
 
         const late = Boolean(pick.submit_deadline &&
