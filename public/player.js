@@ -79,11 +79,17 @@
           playerVars: { autoplay: 1, rel: 0, modestbranding: 1, playsinline: 1 },
           host: 'https://www.youtube-nocookie.com',
           events: {
+            onReady: function (e) {
+              // Belt and braces: playerVars.autoplay is ignored in some
+              // browsers when the player was built after an await.
+              try { e.target.playVideo(); } catch (err) { /* nothing to do */ }
+            },
             onStateChange: function (e) {
               if (e.data === YT.PlayerState.ENDED && autoAdvance) advance();
             },
             onError: function () {
               if (autoAdvance) advance();
+              else setBar('That video will not play here. Open it on YouTube.');
             }
           }
         });
@@ -142,7 +148,9 @@
       block: 'center'
     });
     setBar('Playing ' + (i + 1) + ' of ' + queue.players.length);
-    mount(host, true);
+    mount(host, true).catch(function () {
+      setBar('Could not start the player. Try tapping the song itself.');
+    });
   }
 
   function start() {
@@ -163,6 +171,20 @@
     if (bar) bar.textContent = text || '';
     var btn = document.querySelector('.queuebar__toggle');
     if (btn) btn.textContent = queue.on ? 'Stop' : 'Play all';
+  }
+
+  // Fetch the YouTube API now rather than on the first click. Loading it
+  // inside the click handler meant the player was built a second later,
+  // by which point the browser had stopped treating it as user initiated
+  // and quietly refused to play anything.
+  function preload() {
+    if (document.querySelector('.player[data-video]')) loadYT();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', preload);
+  } else {
+    preload();
   }
 
   document.addEventListener('click', function (e) {
