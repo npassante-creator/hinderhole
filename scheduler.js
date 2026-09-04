@@ -287,6 +287,96 @@ async function nudge() {
 }
 
 // ---------------------------------------------------------------
+// Duplicate songs in a live round
+// ---------------------------------------------------------------
+//
+// The round sheet has shown these all along, but only to whoever thought
+// to open it. By the time anyone noticed, voting had usually started.
+// This tells the commissioners within five minutes of the second person
+// submitting, while there is still time to do something about it.
+
+async function collisions() {
+  const { rows: rounds } = await db.query(
+    `select r.id, r.round_number, r.title, r.league_id
+       from rounds r
+      where r.status in ('submitting', 'voting')`
+  );
+
+  let sent = 0;
+
+  for (const round of rounds) {
+    const { rows: pairs } = await db.query(
+      'select * from round_collisions($1)', [round.id]
+    );
+    if (!pairs.length) continue;
+
+    // Only the ones nobody has been told about yet.
+    const fresh = [];
+    for (const pair of pairs) {
+      const { rows } = await db.query(
+        `select 1 from collision_alerts
+          where round_id = $1 and a_submission = $2 and b_submission = $3`,
+        [round.id, pair.a_id, pair.b_id]
+      );
+      if (!rows[0]) fresh.push(pair);
+    }
+    if (!fresh.length) continue;
+
+    const { rows: admins } = await db.query(
+      `select p.name, p.email
+         from memberships m
+         join players p on p.id = m.player_id
+        where m.league_id = $1 and m.role = 'admin' and p.is_active`,
+      [round.league_id]
+    );
+
+    const lines = fresh.map((x) =>
+      `  ${x.a_player} (${x.a_title})\n  ${x.b_player} (${x.b_title})\n  matched on: ${x.how}`
+    ).join('\n\n');
+
+    const url = `${process.env.APP_URL}/admin/round/${round.id}`;
+
+    for (const admin of admins) {
+      would('collision alert', admin.email, `round ${round.round_number}`);
+      if (DRY) continue;
+      await mail(
+        admin.email,
+        `Two people on one song: round ${round.round_number}`,
+        `Round ${round.round_number}, ${round.title}, has a possible ` +
+        `duplicate.\n\n${lines}\n\nThe matching is fuzzy, so check ` +
+        `before you say anything:\n${url}\n\nNobody else can see this.\n`,
+        wrap(
+          `<p>Round ${round.round_number}, <strong>${round.title}</strong>, ` +
+          `has a possible duplicate.</p>` +
+          fresh.map((x) =>
+            `<p style="margin:0 0 .6em"><strong>${x.a_player}</strong> ` +
+            `&mdash; ${x.a_title}<br><strong>${x.b_player}</strong> ` +
+            `&mdash; ${x.b_title}<br>` +
+            `<span style="color:#888">matched on: ${x.how}</span></p>`
+          ).join('') +
+          `<p><a href="${url}">Open the round sheet</a></p>` +
+          `<p style="color:#666">The matching is fuzzy, so check before ` +
+          `you say anything. Nobody else can see this.</p>`
+        )
+      );
+      sent++;
+    }
+
+    if (!DRY) {
+      for (const pair of fresh) {
+        await db.query(
+          `insert into collision_alerts (round_id, a_submission, b_submission)
+           values ($1,$2,$3) on conflict do nothing`,
+          [round.id, pair.a_id, pair.b_id]
+        );
+      }
+    }
+  }
+
+  return sent;
+}
+
+// ---------------------------------------------------------------
 // The tick
 // ---------------------------------------------------------------
 
@@ -295,11 +385,13 @@ async function tick() {
     const opened = await openVoting();
     const revealed = await reveal();
     const nudged = await nudge();
+    const clashes = await collisions();
 
     if (!DRY) await db.query('select purge_expired_auth()');
 
-    if (opened || revealed || nudged) {
-      log(`opened ${opened}, revealed ${revealed}, nudged ${nudged}`);
+    if (opened || revealed || nudged || clashes) {
+      log(`opened ${opened}, revealed ${revealed}, nudged ${nudged}, ` +
+          `collision alerts ${clashes}`);
     }
   } catch (err) {
     console.error(new Date().toISOString(), '[scheduler] tick failed', err);
