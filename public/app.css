@@ -2136,3 +2136,26 @@ a.chip:hover {
   .queuebar { flex-wrap: wrap; }
   .queuebar__status { width: 100%; }
 }
+
+/* Comment authors, shown only once a round is revealed. */
+.chatter__who {
+  font-family: var(--util);
+  font-size: .64rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--amber);
+  display: block;
+  margin-bottom: .15rem;
+}
+
+/* Points lost for not spending your ten. */
+.result__penalty {
+  margin: 0 0 .4rem;
+  font-family: var(--util);
+  font-size: .66rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.league__penalty { color: var(--amber); }

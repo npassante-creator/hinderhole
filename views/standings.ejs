@@ -25,6 +25,7 @@
             <span class="league__name"><%= row.name %></span>
             <span class="league__detail">
               <%= row.rounds_played %> rounds<% if (row.wins) { %> &middot; <%= row.wins %> won<% } %>
+              <% if (row.total_penalty) { %><span class="league__penalty"> &middot; &minus;<%= row.total_penalty %> unspent</span><% } %>
             </span>
             <span class="league__points"><%= row.points %></span>
           </li>

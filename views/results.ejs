@@ -64,6 +64,13 @@
           <h2 class="result__title"><%= s.title %></h2>
           <p class="result__artist"><%= s.artist || 'Unknown artist' %></p>
 
+          <% if (s.penalty) { %>
+            <p class="result__penalty">
+              <%= s.raw_points %> earned, <%= s.penalty %> deducted for
+              <%= s.penalty %> unspent vote<%= s.penalty === 1 ? "" : "s" %>
+            </p>
+          <% } %>
+
           <p class="result__by">
             <span class="result__submitter"><%= s.submitter %></span>
             <% if (s.is_mine) { %><span class="tag">you</span><% } %>
@@ -85,7 +92,10 @@
           <% if (s.comments.length) { %>
             <ul class="chatter">
               <% s.comments.forEach(function (c) { %>
-                <li class="chatter__line"><%= c %></li>
+                <li class="chatter__line">
+                  <span class="chatter__who"><%= c.author %></span>
+                  <%= c.body %>
+                </li>
               <% }) %>
             </ul>
           <% } %>
