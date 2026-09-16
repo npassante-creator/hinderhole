@@ -23,28 +23,30 @@
       </p>
     <% } %>
 
-    <div class="tally" id="tally"
-         data-budget="<%= budget %>"
-         data-spent="<%= spent %>"
-         data-round="<%= round.id %>">
-      <div class="tally__meter">
-        <span class="tally__fill" style="width: <%= Math.round(spent / budget * 100) %>%"></span>
+    <div class="pinned">
+      <div class="tally" id="tally"
+           data-budget="<%= budget %>"
+           data-spent="<%= spent %>"
+           data-round="<%= round.id %>">
+        <div class="tally__meter">
+          <span class="tally__fill" style="width: <%= Math.round(spent / budget * 100) %>%"></span>
+        </div>
+        <p class="tally__line">
+          <strong class="tally__spent"><%= spent %></strong> of <%= budget %> points spent
+          <span class="tally__state"></span>
+        </p>
+        <p class="tally__due">Votes due <%= voteBy %></p>
       </div>
-      <p class="tally__line">
-        <strong class="tally__spent"><%= spent %></strong> of <%= budget %> points spent
-        <span class="tally__state"></span>
-      </p>
-      <p class="tally__due">Votes due <%= voteBy %></p>
-    </div>
-
-    <div class="queuebar">
-      <button class="queuebar__toggle" type="button">Play all</button>
-      <span class="queuebar__transport" hidden>
-        <button class="queuebar__btn" type="button" data-act="prev" aria-label="Previous song">&#9664;&#9664;</button>
-        <button class="queuebar__btn" type="button" data-act="playpause" aria-label="Pause">&#10074;&#10074;</button>
-        <button class="queuebar__btn" type="button" data-act="next" aria-label="Next song">&#9654;&#9654;</button>
-      </span>
-      <span class="queuebar__status"></span>
+  
+      <div class="queuebar">
+        <button class="queuebar__toggle" type="button">Play all</button>
+        <span class="queuebar__transport" hidden>
+          <button class="queuebar__btn" type="button" data-act="prev" aria-label="Previous song">&#9664;&#9664;</button>
+          <button class="queuebar__btn" type="button" data-act="playpause" aria-label="Pause">&#10074;&#10074;</button>
+          <button class="queuebar__btn" type="button" data-act="next" aria-label="Next song">&#9654;&#9654;</button>
+        </span>
+        <span class="queuebar__status"></span>
+      </div>
     </div>
 
     <ol class="ballot">

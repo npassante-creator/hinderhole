@@ -1,19 +1,29 @@
 /* player.js
  *
- * Two jobs:
- *   1. Click to load. Twenty embeds do not load until they are wanted.
- *   2. Play all. Runs the page top to bottom, advancing when a song ends.
+ * Playback for the ballot and the results page.
  *
- * YouTube needs its IFrame API for the "ended" event, so that script is
- * fetched lazily the first time anything plays. Uploaded audio uses the
- * native ended event. Spotify embeds cannot report state, so continuous
- * play pauses there and waits for a nudge.
+ *   - Nothing loads from YouTube until someone asks for it.
+ *   - Clicking any song starts a run from there and keeps going.
+ *   - Transport controls live in a bar fixed to the bottom of the
+ *     screen, well away from the points buttons.
+ *
+ * Also carries the unread count on the chat link, which lives here
+ * because this file is on every page.
  */
 (function () {
   'use strict';
 
   var ytReady = null;
   var queue = { on: false, index: -1, players: [] };
+  var bar = null;          // the bottom transport bar, built on first use
+
+  // ---------------------------------------------------------------
+  // YouTube API
+  // ---------------------------------------------------------------
+  // Fetched when the page loads, not on the first click. Loading it
+  // inside a click handler meant the player was built a second later,
+  // by which point the browser no longer treated playback as user
+  // initiated and silently refused to start.
 
   function loadYT() {
     if (ytReady) return ytReady;
@@ -30,6 +40,10 @@
     });
     return ytReady;
   }
+
+  // ---------------------------------------------------------------
+  // Mounting and unmounting a single player
+  // ---------------------------------------------------------------
 
   function stopOthers(except) {
     document.querySelectorAll('.player--live').forEach(function (host) {
@@ -58,7 +72,7 @@
     }
   }
 
-  function mount(host, autoAdvance) {
+  function mount(host) {
     var source = host.getAttribute('data-source');
     var id = host.getAttribute('data-video');
     var embed = host.getAttribute('data-embed');
@@ -80,19 +94,19 @@
           host: 'https://www.youtube-nocookie.com',
           events: {
             onReady: function (e) {
-              // Belt and braces: playerVars.autoplay is ignored in some
-              // browsers when the player was built after an await.
-              try { e.target.playVideo(); } catch (err) { /* nothing to do */ }
+              // playerVars.autoplay is unreliable once a promise has
+              // broken the gesture chain, so ask directly.
+              try { e.target.playVideo(); } catch (err) { /* fine */ }
             },
             onStateChange: function (e) {
-              if (e.data === YT.PlayerState.ENDED && autoAdvance) advance();
-              // Someone may pause inside the player rather than using ours.
+              if (e.data === YT.PlayerState.ENDED) advance();
               if (e.data === YT.PlayerState.PLAYING) setPlayPause(false);
               if (e.data === YT.PlayerState.PAUSED) setPlayPause(true);
             },
             onError: function () {
-              if (autoAdvance) advance();
-              else setBar('That video will not play here. Open it on YouTube.');
+              // Embedding disabled, dead video, region block. Move on.
+              note('That one will not play here. Skipping.');
+              advance();
             }
           }
         });
@@ -103,12 +117,13 @@
     var audio = host.querySelector('.player__audio');
     if (audio) {
       audio.play();
-      if (autoAdvance) {
-        audio.onended = function () { advance(); };
-      }
+      audio.onended = function () { advance(); };
+      audio.onplay = function () { setPlayPause(false); };
+      audio.onpause = function () { setPlayPause(true); };
       return Promise.resolve(true);
     }
 
+    // Spotify. No state events exist, so the run cannot continue itself.
     var frame = document.createElement('iframe');
     frame.src = embed;
     frame.className = 'player__frame';
@@ -117,13 +132,13 @@
     frame.setAttribute('loading', 'lazy');
     frame.setAttribute('title', 'Player');
     host.insertBefore(frame, host.firstChild);
-
-    if (autoAdvance) {
-      queue.on = false;
-      setBar('Spotify cannot report when a track ends. Press play all again to carry on.');
-    }
+    note('Spotify cannot tell us when a track ends. Hit next when you are done.');
     return Promise.resolve(true);
   }
+
+  // ---------------------------------------------------------------
+  // The run
+  // ---------------------------------------------------------------
 
   function collect() {
     return Array.prototype.slice.call(document.querySelectorAll('.player'))
@@ -132,110 +147,205 @@
       });
   }
 
-  function advance() {
-    if (!queue.on) return;
-    var next = queue.index + 1;
-    if (next >= queue.players.length) return stop('Reached the end of the round.');
-    play(next);
+  function titleOf(host) {
+    var card = host.closest('.card, .result, li');
+    if (!card) return '';
+    var h = card.querySelector('.card__title, .result__title, .pick__title');
+    return h ? h.textContent.trim() : '';
   }
 
   function play(i) {
+    queue.players = queue.players.length ? queue.players : collect();
+    if (i < 0 || i >= queue.players.length) return;
+
+    queue.on = true;
     queue.index = i;
     var host = queue.players[i];
+
     document.querySelectorAll('.player--current').forEach(function (p) {
       if (p !== host) p.classList.remove('player--current');
     });
+
     host.scrollIntoView({
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto' : 'smooth',
       block: 'center'
     });
-    setBar('Playing ' + (i + 1) + ' of ' + queue.players.length);
-    mount(host, true).catch(function () {
-      setBar('Could not start the player. Try tapping the song itself.');
+
+    showBar();
+    setNowPlaying(i, titleOf(host));
+    setPlayPause(false);
+
+    mount(host).catch(function () {
+      note('Could not start that one.');
     });
   }
 
-  function start() {
-    queue.players = collect();
-    if (!queue.players.length) return;
-    queue.on = true;
-    play(0);
-  }
-
-  function stop(msg) {
-    queue.on = false;
-    stopOthers(null);
-    setBar(msg || null);
-  }
-
-  function setBar(text) {
-    var bar = document.querySelector('.queuebar__status');
-    if (bar) bar.textContent = text || '';
-    var btn = document.querySelector('.queuebar__toggle');
-    if (btn) btn.textContent = queue.on ? 'Stop' : 'Play all';
-
-    var transport = document.querySelector('.queuebar__transport');
-    if (transport) {
-      if (queue.on) transport.removeAttribute('hidden');
-      else transport.setAttribute('hidden', '');
+  function advance() {
+    if (!queue.on) return;
+    if (queue.index + 1 >= queue.players.length) {
+      return stop('That is the lot.');
     }
+    play(queue.index + 1);
   }
 
-  /** The play/pause button has to say what it will do, not what is happening. */
-  function setPlayPause(paused) {
-    var b = document.querySelector('[data-act="playpause"]');
-    if (!b) return;
-    b.innerHTML = paused ? '&#9654;' : '&#10074;&#10074;';
-    b.setAttribute('aria-label', paused ? 'Play' : 'Pause');
-  }
-
-  /** The player for whatever is currently up, if it is a YouTube one. */
-  function current() {
-    var host = queue.players[queue.index];
-    return host && host._yt ? host._yt : null;
-  }
+  function skip() { advance(); }
 
   function back() {
     if (!queue.on) return;
-    // Past ten seconds in, go to the start of this one instead. Same as
-    // every other player anyone has used.
     var yt = current();
+    // More than ten seconds in, restart this one. Same as every player.
     if (yt && yt.getCurrentTime && yt.getCurrentTime() > 10) {
       yt.seekTo(0);
       return;
     }
     if (queue.index > 0) play(queue.index - 1);
+    else if (yt && yt.seekTo) yt.seekTo(0);
   }
 
-  function skip() {
-    if (!queue.on) return;
-    if (queue.index + 1 >= queue.players.length) {
-      return stop('Reached the end of the round.');
-    }
-    play(queue.index + 1);
+  function startFromTop() {
+    queue.players = collect();
+    if (queue.players.length) play(0);
+  }
+
+  function stop(msg) {
+    queue.on = false;
+    queue.index = -1;
+    stopOthers(null);
+    hideBar(msg);
+  }
+
+  function current() {
+    var host = queue.players[queue.index];
+    return host && host._yt ? host._yt : null;
   }
 
   function togglePause() {
     var yt = current();
     if (yt && yt.getPlayerState) {
-      // 1 is playing, 2 is paused, 3 is buffering.
       if (yt.getPlayerState() === 1) { yt.pauseVideo(); setPlayPause(true); }
       else { yt.playVideo(); setPlayPause(false); }
       return;
     }
-    var audio = queue.players[queue.index] &&
-                queue.players[queue.index].querySelector('.player__audio');
+    var host = queue.players[queue.index];
+    var audio = host && host.querySelector('.player__audio');
     if (audio) {
-      if (audio.paused) { audio.play(); setPlayPause(false); }
-      else { audio.pause(); setPlayPause(true); }
+      if (audio.paused) audio.play();
+      else audio.pause();
     }
   }
 
-  // Fetch the YouTube API now rather than on the first click. Loading it
-  // inside the click handler meant the player was built a second later,
-  // by which point the browser had stopped treating it as user initiated
-  // and quietly refused to play anything.
+  // ---------------------------------------------------------------
+  // The bottom bar
+  // ---------------------------------------------------------------
+  // Deliberately not next to the points buttons. Reaching for next and
+  // hitting a 7 by mistake is a worse bug than any of this.
+
+  function buildBar() {
+    if (bar) return bar;
+
+    bar = document.createElement('div');
+    bar.className = 'nowbar';
+    bar.setAttribute('hidden', '');
+    bar.innerHTML =
+      '<div class="nowbar__inner">' +
+        '<div class="nowbar__meta">' +
+          '<span class="nowbar__pos"></span>' +
+          '<span class="nowbar__title"></span>' +
+        '</div>' +
+        '<div class="nowbar__controls">' +
+          '<button class="nowbar__btn" type="button" data-act="prev" aria-label="Previous">&#9664;&#9664;</button>' +
+          '<button class="nowbar__btn nowbar__btn--play" type="button" data-act="playpause" aria-label="Pause">&#10074;&#10074;</button>' +
+          '<button class="nowbar__btn" type="button" data-act="next" aria-label="Next">&#9654;&#9654;</button>' +
+          '<button class="nowbar__btn nowbar__btn--stop" type="button" data-act="stop" aria-label="Stop">&times;</button>' +
+        '</div>' +
+      '</div>' +
+      '<p class="nowbar__note"></p>';
+
+    document.body.appendChild(bar);
+    document.body.classList.add('has-nowbar');
+    return bar;
+  }
+
+  function showBar() {
+    buildBar().removeAttribute('hidden');
+    document.body.classList.add('nowbar-open');
+  }
+
+  function hideBar(msg) {
+    if (!bar) return;
+    bar.setAttribute('hidden', '');
+    document.body.classList.remove('nowbar-open');
+    if (msg) setStatus(msg);
+  }
+
+  function setNowPlaying(i, title) {
+    buildBar();
+    var pos = bar.querySelector('.nowbar__pos');
+    var t = bar.querySelector('.nowbar__title');
+    if (pos) pos.textContent = (i + 1) + ' of ' + queue.players.length;
+    if (t) t.textContent = title || '';
+    note('');
+  }
+
+  function setPlayPause(paused) {
+    if (!bar) return;
+    var b = bar.querySelector('[data-act="playpause"]');
+    if (!b) return;
+    b.innerHTML = paused ? '&#9654;' : '&#10074;&#10074;';
+    b.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  }
+
+  /** A transient line in the bottom bar. */
+  function note(text) {
+    if (!bar) return;
+    var n = bar.querySelector('.nowbar__note');
+    if (n) n.textContent = text || '';
+  }
+
+  /** The old status line up top, still used when a run ends. */
+  function setStatus(text) {
+    var el = document.querySelector('.queuebar__status');
+    if (el) el.textContent = text || '';
+    var btn = document.querySelector('.queuebar__toggle');
+    if (btn) btn.textContent = 'Play all';
+  }
+
+  // ---------------------------------------------------------------
+  // Wiring
+  // ---------------------------------------------------------------
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+
+    // Clicking a song starts the run from that song rather than playing
+    // it alone. Wanting to hear one and then stop is the rarer case.
+    var facade = e.target.closest('.player__facade');
+    if (facade) {
+      var host = facade.closest('.player');
+      queue.players = collect();
+      var idx = queue.players.indexOf(host);
+      play(idx === -1 ? 0 : idx);
+      return;
+    }
+
+    var toggle = e.target.closest('.queuebar__toggle');
+    if (toggle) {
+      if (queue.on) stop(null);
+      else startFromTop();
+      return;
+    }
+
+    var act = e.target.closest('.nowbar__btn');
+    if (act) {
+      var what = act.getAttribute('data-act');
+      if (what === 'next') skip();
+      else if (what === 'prev') back();
+      else if (what === 'playpause') togglePause();
+      else if (what === 'stop') stop(null);
+    }
+  });
+
   function preload() {
     if (document.querySelector('.player[data-video]')) loadYT();
   }
@@ -245,45 +355,6 @@
   } else {
     preload();
   }
-
-  document.addEventListener('click', function (e) {
-    if (!e.target.closest) return;
-
-    var facade = e.target.closest('.player__facade');
-    if (facade) {
-      queue.on = false;
-      setBar(null);
-      mount(facade.closest('.player'), false);
-      return;
-    }
-
-    var toggle = e.target.closest('.queuebar__toggle');
-    if (toggle) {
-      if (queue.on) stop(null);
-      else start();
-      return;
-    }
-
-    var act = e.target.closest('.queuebar__btn');
-    if (act) {
-      var what = act.getAttribute('data-act');
-      if (what === 'next') skip();
-      else if (what === 'prev') back();
-      else if (what === 'playpause') togglePause();
-    }
-  });
-}());
-
-
-/* Fill in whichever header link points at the page you are on. Done here
-   rather than server side so every view gets it without being touched. */
-(function () {
-  'use strict';
-  var here = location.pathname.replace(/\/+$/, '') || '/';
-  document.querySelectorAll('.bar__back, .bar__admin').forEach(function (a) {
-    var href = (a.getAttribute('href') || '').replace(/\/+$/, '') || '/';
-    if (href === here) a.classList.add('is-here');
-  });
 }());
 
 
@@ -294,8 +365,6 @@
 
   var link = document.querySelector('a[href="/chat"]');
   if (!link) return;
-
-  // Pointless while you are sitting in the room reading it.
   if (location.pathname.replace(/\/+$/, '') === '/chat') return;
 
   function paint(n) {
