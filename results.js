@@ -60,6 +60,7 @@ function router(db) {
       const { rows: songs } = await db.query(
         `select s.id, s.title, s.artist, s.source, s.source_url,
                 s.external_id, s.thumbnail_url, s.note, s.is_late,
+                s.player_id,
                 p.name as submitter,
                 (s.player_id = $2) as is_mine,
                 coalesce(sum(v.points), 0)::int as points,
@@ -90,6 +91,15 @@ function router(db) {
         bySong.get(c.submission_id).push({ body: c.body, author: c.author });
       });
 
+      // Points left unspent come off that player's own score.
+      const { rows: penaltyRows } = await db.query(
+        'select player_id, unspent from v_vote_penalties where round_id = $1',
+        [round.id]
+      );
+      const penaltyBy = new Map(
+        penaltyRows.map((x) => [String(x.player_id), x.unspent])
+      );
+
       // Apply penalties before ranking, so places reflect final scores.
       songs.forEach((row) => {
         row.penalty = penaltyBy.get(String(row.player_id)) || 0;
@@ -110,14 +120,6 @@ function router(db) {
         return { ...s, place, comments: bySong.get(s.id) || [] };
       });
 
-      // Points left unspent come off that player's own score.
-      const { rows: penaltyRows } = await db.query(
-        'select player_id, unspent from v_vote_penalties where round_id = $1',
-        [round.id]
-      );
-      const penaltyBy = new Map(
-        penaltyRows.map((x) => [String(x.player_id), x.unspent])
-      );
 
       const { rows: turnout } = await db.query(
         `select count(distinct v.voter_id)::int as voted,
