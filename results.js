@@ -63,9 +63,6 @@ function router(db) {
                 p.name as submitter,
                 (s.player_id = $2) as is_mine,
                 coalesce(sum(v.points), 0)::int as points,
-                coalesce((select sum(vp.unspent) from v_vote_penalties vp
-                           where vp.league_id = $1 and vp.player_id = p.id), 0)::int
-                  as total_penalty,
                 count(v.id)::int as backers,
                 coalesce(max(case when v.voter_id = $2 then v.points end), 0)::int as my_points
            from submissions s
