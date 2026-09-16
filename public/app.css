@@ -2103,3 +2103,36 @@ a.chip:hover {
   color: var(--amber);
   margin-left: .3rem;
 }
+
+/* Transport controls, shown only while a run is going. */
+.queuebar__transport {
+  display: inline-flex;
+  gap: .25rem;
+  flex: none;
+}
+
+.queuebar__transport[hidden] { display: none; }
+
+.queuebar__btn {
+  font-family: var(--util);
+  font-size: .7rem;
+  line-height: 1;
+  min-width: 2.2rem;
+  padding: .45rem .4rem;
+  border: 1px solid rgba(240, 232, 216, .26);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--stock);
+  cursor: pointer;
+}
+
+.queuebar__btn:hover,
+.queuebar__btn:focus-visible {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+@media (max-width: 30rem) {
+  .queuebar { flex-wrap: wrap; }
+  .queuebar__status { width: 100%; }
+}

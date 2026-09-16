@@ -86,6 +86,9 @@
             },
             onStateChange: function (e) {
               if (e.data === YT.PlayerState.ENDED && autoAdvance) advance();
+              // Someone may pause inside the player rather than using ours.
+              if (e.data === YT.PlayerState.PLAYING) setPlayPause(false);
+              if (e.data === YT.PlayerState.PAUSED) setPlayPause(true);
             },
             onError: function () {
               if (autoAdvance) advance();
@@ -171,6 +174,62 @@
     if (bar) bar.textContent = text || '';
     var btn = document.querySelector('.queuebar__toggle');
     if (btn) btn.textContent = queue.on ? 'Stop' : 'Play all';
+
+    var transport = document.querySelector('.queuebar__transport');
+    if (transport) {
+      if (queue.on) transport.removeAttribute('hidden');
+      else transport.setAttribute('hidden', '');
+    }
+  }
+
+  /** The play/pause button has to say what it will do, not what is happening. */
+  function setPlayPause(paused) {
+    var b = document.querySelector('[data-act="playpause"]');
+    if (!b) return;
+    b.innerHTML = paused ? '&#9654;' : '&#10074;&#10074;';
+    b.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  }
+
+  /** The player for whatever is currently up, if it is a YouTube one. */
+  function current() {
+    var host = queue.players[queue.index];
+    return host && host._yt ? host._yt : null;
+  }
+
+  function back() {
+    if (!queue.on) return;
+    // Past ten seconds in, go to the start of this one instead. Same as
+    // every other player anyone has used.
+    var yt = current();
+    if (yt && yt.getCurrentTime && yt.getCurrentTime() > 10) {
+      yt.seekTo(0);
+      return;
+    }
+    if (queue.index > 0) play(queue.index - 1);
+  }
+
+  function skip() {
+    if (!queue.on) return;
+    if (queue.index + 1 >= queue.players.length) {
+      return stop('Reached the end of the round.');
+    }
+    play(queue.index + 1);
+  }
+
+  function togglePause() {
+    var yt = current();
+    if (yt && yt.getPlayerState) {
+      // 1 is playing, 2 is paused, 3 is buffering.
+      if (yt.getPlayerState() === 1) { yt.pauseVideo(); setPlayPause(true); }
+      else { yt.playVideo(); setPlayPause(false); }
+      return;
+    }
+    var audio = queue.players[queue.index] &&
+                queue.players[queue.index].querySelector('.player__audio');
+    if (audio) {
+      if (audio.paused) { audio.play(); setPlayPause(false); }
+      else { audio.pause(); setPlayPause(true); }
+    }
   }
 
   // Fetch the YouTube API now rather than on the first click. Loading it
@@ -202,6 +261,15 @@
     if (toggle) {
       if (queue.on) stop(null);
       else start();
+      return;
+    }
+
+    var act = e.target.closest('.queuebar__btn');
+    if (act) {
+      var what = act.getAttribute('data-act');
+      if (what === 'next') skip();
+      else if (what === 'prev') back();
+      else if (what === 'playpause') togglePause();
     }
   });
 }());
