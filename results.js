@@ -63,6 +63,9 @@ function router(db) {
                 p.name as submitter,
                 (s.player_id = $2) as is_mine,
                 coalesce(sum(v.points), 0)::int as points,
+                coalesce((select sum(vp.unspent) from v_vote_penalties vp
+                           where vp.league_id = $1 and vp.player_id = p.id), 0)::int
+                  as total_penalty,
                 count(v.id)::int as backers,
                 coalesce(max(case when v.voter_id = $2 then v.points end), 0)::int as my_points
            from submissions s
@@ -76,17 +79,28 @@ function router(db) {
 
       // Comments are attributed to nobody, on purpose.
       const { rows: comments } = await db.query(
-        `select submission_id, body from comments
-          where round_id = $1
-          order by created_at`,
+        `select c.submission_id, c.body, p.name as author
+           from comments c
+           join players p on p.id = c.author_id
+          where c.round_id = $1
+          order by c.created_at`,
         [round.id]
       );
 
       const bySong = new Map();
       comments.forEach((c) => {
         if (!bySong.has(c.submission_id)) bySong.set(c.submission_id, []);
-        bySong.get(c.submission_id).push(c.body);
+        bySong.get(c.submission_id).push({ body: c.body, author: c.author });
       });
+
+      // Apply penalties before ranking, so places reflect final scores.
+      songs.forEach((row) => {
+        row.penalty = penaltyBy.get(String(row.player_id)) || 0;
+        row.raw_points = row.points;
+        row.points = row.points - row.penalty;
+      });
+      songs.sort((a, b) => b.points - a.points ||
+                           String(a.title).localeCompare(String(b.title)));
 
       // Dense ranking, so a tie shares a place and does not eat the next one.
       let place = 0;
@@ -98,6 +112,15 @@ function router(db) {
         }
         return { ...s, place, comments: bySong.get(s.id) || [] };
       });
+
+      // Points left unspent come off that player's own score.
+      const { rows: penaltyRows } = await db.query(
+        'select player_id, unspent from v_vote_penalties where round_id = $1',
+        [round.id]
+      );
+      const penaltyBy = new Map(
+        penaltyRows.map((x) => [String(x.player_id), x.unspent])
+      );
 
       const { rows: turnout } = await db.query(
         `select count(distinct v.voter_id)::int as voted,
@@ -163,6 +186,14 @@ function router(db) {
           order by points desc, p.name`,
         [league.id]
       );
+
+      // Unspent points come off the season total too.
+      table.forEach((row) => {
+        row.raw_points = row.points;
+        row.points = row.points - (row.total_penalty || 0);
+      });
+      table.sort((a, b) => b.points - a.points ||
+                           String(a.name).localeCompare(String(b.name)));
 
       let place = 0;
       let last = null;
