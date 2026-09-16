@@ -2318,3 +2318,18 @@ body.nowbar-open { padding-bottom: 5.5rem; }
 
 /* The old inline transport is gone; controls live at the bottom now. */
 .queuebar__transport { display: none !important; }
+
+/* Vote progress on the commissioner round sheet. */
+.grid__spent { white-space: nowrap; }
+
+.grid__done {
+  font-family: var(--util);
+  font-size: .8rem;
+  color: #4f9c6c;
+}
+
+.grid__owed {
+  font-family: var(--util);
+  font-size: .8rem;
+  color: var(--amber);
+}

@@ -269,7 +269,11 @@ function router(db) {
           `select p.id, p.name, p.email,
                   s.id as submission_id, s.title, s.artist, s.source,
                   s.is_late, s.submitted_at,
-                  (w.player_id is not null) as has_waiver
+                  (w.player_id is not null) as has_waiver,
+                  can_vote($1, p.id) as eligible,
+                  coalesce((select sum(v.points) from votes v
+                             where v.round_id = $1 and v.voter_id = p.id), 0)::int
+                    as spent
              from memberships m
              join players p on p.id = m.player_id
              left join submissions s
@@ -299,6 +303,13 @@ function router(db) {
           submitBy: fmt(req.round.submit_deadline, { weekday: 'short' }),
           voteBy: fmt(req.round.vote_deadline, { weekday: 'short' }),
           missing: people.filter((p) => !p.submission_id).length,
+          budget: req.league.points_per_voter,
+          // Eligible voters who have not spent everything. The ones worth
+          // a nudge before the deadline.
+          notVoted: people.filter((x) => x.eligible && x.spent === 0).length,
+          partial: people.filter(
+            (x) => x.eligible && x.spent > 0 &&
+                   x.spent < req.league.points_per_voter).length,
           error: req.query.err || null,
           notice: req.query.ok || null,
         });

@@ -19,6 +19,7 @@
       <div class="facts__row"><dt>Songs due</dt><dd><%= submitBy || 'unset' %></dd></div>
       <div class="facts__row"><dt>Votes due</dt><dd><%= voteBy || 'unset' %></dd></div>
       <div class="facts__row"><dt>Still missing</dt><dd><%= missing %></dd></div>
+      <div class="facts__row"><dt>Not voted</dt><dd><%= notVoted %> none, <%= partial %> partway</dd></div>
     </dl>
 
     <h2 class="rack__heading">Give them more time</h2>
@@ -86,7 +87,7 @@
     <h2 class="rack__heading">Who is in</h2>
     <table class="grid">
       <thead>
-        <tr><th>Player</th><th>Song</th><th>Extension</th></tr>
+        <tr><th>Player</th><th>Song</th><th>Voted</th><th>Extension</th></tr>
       </thead>
       <tbody>
         <% people.forEach(function (p) { %>
@@ -101,6 +102,15 @@
                 <span class="grid__sub"><%= p.artist || 'unknown' %> &middot; <%= p.submittedAt %></span>
               <% } else { %>
                 <span class="grid__sub">nothing yet</span>
+              <% } %>
+            </td>
+            <td class="grid__spent">
+              <% if (!p.eligible) { %>
+                <span class="grid__sub">not eligible</span>
+              <% } else if (p.spent >= budget) { %>
+                <span class="grid__done"><%= p.spent %>/<%= budget %></span>
+              <% } else { %>
+                <span class="grid__owed"><%= p.spent %>/<%= budget %></span>
               <% } %>
             </td>
             <td>
