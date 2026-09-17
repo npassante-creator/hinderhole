@@ -100,11 +100,27 @@ function router(db) {
         penaltyRows.map((x) => [String(x.player_id), x.unspent])
       );
 
+      const { rows: adjRows } = await db.query(
+        `select player_id, points, reason from adjustments
+          where round_id = $1`,
+        [round.id]
+      );
+      const adjustBy = new Map();
+      adjRows.forEach((a) => {
+        const k = String(a.player_id);
+        if (!adjustBy.has(k)) adjustBy.set(k, { points: 0, reasons: [] });
+        adjustBy.get(k).points += a.points;
+        adjustBy.get(k).reasons.push(a.reason);
+      });
+
       // Apply penalties before ranking, so places reflect final scores.
       songs.forEach((row) => {
         row.penalty = penaltyBy.get(String(row.player_id)) || 0;
+        var adj = adjustBy.get(String(row.player_id));
+        row.adjustment = adj ? adj.points : 0;
+        row.adjust_reasons = adj ? adj.reasons : [];
         row.raw_points = row.points;
-        row.points = row.points - row.penalty;
+        row.points = row.points - row.penalty + row.adjustment;
       });
       songs.sort((a, b) => b.points - a.points ||
                            String(a.title).localeCompare(String(b.title)));
@@ -161,6 +177,9 @@ function router(db) {
         `select p.id, p.name,
                 coalesce(sum(v.points), 0)::int as points,
                 count(distinct s.round_id)::int as rounds_played,
+                coalesce((select sum(a.points) from adjustments a
+                           where a.league_id = m.league_id
+                             and a.player_id = p.id), 0)::int as total_adjustment,
                 count(distinct case when r.status = 'revealed'
                                     and w.submission_id is not null
                                then s.round_id end)::int as wins
@@ -189,7 +208,8 @@ function router(db) {
       // Unspent points come off the season total too.
       table.forEach((row) => {
         row.raw_points = row.points;
-        row.points = row.points - (row.total_penalty || 0);
+        row.points = row.points - (row.total_penalty || 0)
+                                + (row.total_adjustment || 0);
       });
       table.sort((a, b) => b.points - a.points ||
                            String(a.name).localeCompare(String(b.name)));

@@ -2333,3 +2333,13 @@ body.nowbar-open { padding-bottom: 5.5rem; }
   font-size: .8rem;
   color: var(--amber);
 }
+
+/* Commissioner adjustments, shown with their reason. */
+.result__adjust {
+  margin: 0 0 .4rem;
+  font-family: var(--util);
+  font-size: .66rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--oxblood);
+}

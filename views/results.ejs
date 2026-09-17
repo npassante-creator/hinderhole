@@ -64,6 +64,14 @@
           <h2 class="result__title"><%= s.title %></h2>
           <p class="result__artist"><%= s.artist || 'Unknown artist' %></p>
 
+          <% if (s.adjustment) { %>
+            <p class="result__adjust">
+              <%= s.adjustment > 0 ? "+" : "" %><%= s.adjustment %>
+              from the commissioner:
+              <%= s.adjust_reasons.join("; ") %>
+            </p>
+          <% } %>
+
           <% if (s.penalty) { %>
             <p class="result__penalty">
               <%= s.raw_points %> earned, <%= s.penalty %> deducted for

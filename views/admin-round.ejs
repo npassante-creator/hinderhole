@@ -84,6 +84,66 @@
       </div>
     <% } %>
 
+    <details class="drawer">
+      <summary class="drawer__summary">Adjust someone's points</summary>
+
+      <% if (typeof adjustments !== 'undefined' && adjustments.length) { %>
+        <ul class="ledger">
+          <% adjustments.forEach(function (a) { %>
+            <li class="ledger__row">
+              <span class="ledger__when"><%= a.points > 0 ? '+' : '' %><%= a.points %></span>
+              <span class="ledger__what">
+                <%= a.name %> &middot; <%= a.reason %>
+                <% if (!a.round_id) { %><span class="tag">season</span><% } %>
+              </span>
+              <span class="ledger__who">
+                <form method="post" action="/admin/adjust/<%= a.id %>/remove"
+                      onsubmit="return confirm('Undo this adjustment?')">
+                  <button class="chip chip--danger" type="submit">undo</button>
+                </form>
+              </span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+
+      <form class="strip strip--form" method="post"
+            action="/admin/round/<%= round.id %>/adjust">
+        <label class="field">
+          <span class="field__label">Player</span>
+          <select class="field__input" name="player_id" required>
+            <option value="">Choose a player</option>
+            <% people.forEach(function (p) { %>
+              <option value="<%= p.id %>"><%= p.name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field__label">Points (negative to take away)</span>
+          <input class="field__input" type="number" name="points"
+                 step="1" placeholder="-5" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Reason (everyone sees this)</span>
+          <input class="field__input" type="text" name="reason"
+                 maxlength="200" placeholder="Song did not fit the category" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Applies to</span>
+          <select class="field__input" name="scope">
+            <option value="round">This round</option>
+            <option value="season">The season total</option>
+          </select>
+        </label>
+        <button class="button" type="submit">Apply</button>
+      </form>
+
+      <p class="fineprint">
+        Shown on the results page with the reason attached. Nothing here
+        touches anyone's votes, so the arithmetic still adds up.
+      </p>
+    </details>
+
     <h2 class="rack__heading">Who is in</h2>
     <table class="grid">
       <thead>

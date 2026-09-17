@@ -291,8 +291,20 @@ function router(db) {
           'select * from round_collisions($1)', [req.round.id]
         );
 
+        const { rows: adjustments } = await db.query(
+          `select a.*, p.name, m.name as made_by_name
+             from adjustments a
+             join players p on p.id = a.player_id
+             join players m on m.id = a.made_by
+            where a.league_id = $1
+              and (a.round_id = $2 or a.round_id is null)
+            order by a.created_at desc`,
+          [req.league.id, req.round.id]
+        );
+
         res.render('admin-round', {
           league: req.league,
+          adjustments,
           round: req.round,
           clashes,
           bumps: Object.entries(BUMPS).map(([key, label]) => ({ key, label })),
@@ -667,6 +679,70 @@ function router(db) {
         res.redirect('/admin?ok=' + encodeURIComponent(
           `${sent} sign in link${sent === 1 ? '' : 's'} sent.` +
           (failed ? ` ${failed} failed, check the logs.` : '')));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+  // ---------------------------------------------------------------
+  // Point adjustments
+  // ---------------------------------------------------------------
+  // A separate line rather than an edit to anyone's votes, so the
+  // results page can show its working. Every one carries a reason and
+  // is visible to the whole league.
+
+  r.post('/admin/round/:id/adjust', requireAuth, requireAdmin, loadRound, form,
+    async (req, res, next) => {
+      try {
+        const playerId = Number(req.body.player_id);
+        const points = Number(req.body.points);
+        const reason = String(req.body.reason || '').trim();
+        const seasonWide = req.body.scope === 'season';
+
+        if (!playerId || !Number.isInteger(points) || points === 0) {
+          return res.redirect(`/admin/round/${req.round.id}?err=` +
+            encodeURIComponent('Pick a player and a non-zero number.'));
+        }
+        if (reason.length < 3) {
+          return res.redirect(`/admin/round/${req.round.id}?err=` +
+            encodeURIComponent('Put a reason. Everyone will see it.'));
+        }
+
+        await db.query(
+          `insert into adjustments
+             (league_id, round_id, player_id, points, reason, made_by)
+           values ($1,$2,$3,$4,$5,$6)`,
+          [req.league.id, seasonWide ? null : req.round.id,
+           playerId, points, reason.slice(0, 200), req.player.id]
+        );
+
+        const who = await nameOf(playerId);
+        await log(req.league.id, req.player.id, 'adjustment',
+          `${points > 0 ? '+' : ''}${points} to ${who}: ${reason}`);
+
+        res.redirect(`/admin/round/${req.round.id}?ok=` +
+          encodeURIComponent(`${points > 0 ? '+' : ''}${points} to ${who}.`));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+  r.post('/admin/adjust/:adjId/remove', requireAuth, requireAdmin, form,
+    async (req, res, next) => {
+      try {
+        const { rows } = await db.query(
+          `delete from adjustments
+            where id = $1 and league_id = $2
+          returning round_id, points, player_id`,
+          [req.params.adjId, req.league.id]
+        );
+        if (rows[0]) {
+          await log(req.league.id, req.player.id, 'adjustment_removed',
+            `${rows[0].points} from ${await nameOf(rows[0].player_id)} undone`);
+        }
+        const back = rows[0] && rows[0].round_id
+          ? `/admin/round/${rows[0].round_id}` : '/admin';
+        res.redirect(back + '?ok=' + encodeURIComponent('Adjustment removed.'));
       } catch (err) {
         next(err);
       }
