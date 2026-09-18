@@ -178,7 +178,7 @@ function router(db) {
                 coalesce(sum(v.points), 0)::int as points,
                 count(distinct s.round_id)::int as rounds_played,
                 coalesce((select sum(a.points) from adjustments a
-                           where a.league_id = m.league_id
+                           where a.league_id = $1
                              and a.player_id = p.id), 0)::int as total_adjustment,
                 count(distinct case when r.status = 'revealed'
                                     and w.submission_id is not null
