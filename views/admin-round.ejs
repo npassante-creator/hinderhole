@@ -72,11 +72,15 @@
         <span class="echo__label">Two people, one song</span>
         <ul class="echo__list">
           <% clashes.forEach(function (c) { %>
+            <% if (c.hidden) { %>
+              <li><%= c.n %> possible duplicate<%= c.n === 1 ? "" : "s" %> in this round. Show the songs to see them.</li>
+            <% } else { %>
             <li>
               <strong><%= c.a_player %></strong> (<%= c.a_title %>)
               and <strong><%= c.b_player %></strong> (<%= c.b_title %>)
               <span class="echo__how"><%= c.how %></span>
             </li>
+            <% } %>
           <% }) %>
         </ul>
         Nobody else can see this. Matching is fuzzy, so check before you
@@ -145,6 +149,21 @@
     </details>
 
     <h2 class="rack__heading">Who is in</h2>
+
+    <% if (!showSongs) { %>
+      <p class="moves">
+        <a class="chip" href="/admin/round/<%= round.id %>?songs=1">Show the songs</a>
+      </p>
+      <p class="fineprint">
+        Hidden so you can run the round without seeing what everyone
+        picked. Everything else here works without them.
+      </p>
+    <% } else if (round.status !== 'revealed') { %>
+      <p class="moves">
+        <a class="chip chip--on" href="/admin/round/<%= round.id %>">Hide the songs again</a>
+      </p>
+    <% } %>
+
     <table class="grid">
       <thead>
         <tr><th>Player</th><th>Song</th><th>Voted</th><th>Extension</th></tr>
@@ -157,7 +176,9 @@
               <% if (p.is_late) { %><span class="tag tag--late">late</span><% } %>
             </td>
             <td>
-              <% if (p.submission_id) { %>
+              <% if (p.submission_id && !showSongs) { %>
+                <span class="grid__sub">in</span>
+              <% } else if (p.submission_id) { %>
                 <span class="grid__song"><%= p.title %></span>
                 <span class="grid__sub"><%= p.artist || 'unknown' %> &middot; <%= p.submittedAt %></span>
               <% } else { %>

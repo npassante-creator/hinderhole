@@ -265,9 +265,17 @@ function router(db) {
   r.get('/admin/round/:id', requireAuth, requireAdmin, loadRound,
     async (req, res, next) => {
       try {
+        // The commissioner is a player too. Titles are left out of the
+        // query entirely unless they ask, rather than fetched and hidden.
+        const showSongs = req.query.songs === '1' ||
+                          req.round.status === 'revealed';
+
         const { rows: people } = await db.query(
           `select p.id, p.name, p.email,
-                  s.id as submission_id, s.title, s.artist, s.source,
+                  s.id as submission_id,
+                  case when $3 then s.title  end as title,
+                  case when $3 then s.artist end as artist,
+                  s.source,
                   s.is_late, s.submitted_at,
                   (w.player_id is not null) as has_waiver,
                   can_vote($1, p.id) as eligible,
@@ -282,14 +290,18 @@ function router(db) {
                     on w.player_id = p.id and w.round_id = $1
             where m.league_id = $2
             order by (s.id is null), p.name`,
-          [req.round.id, req.league.id]
+          [req.round.id, req.league.id, showSongs]
         );
 
         // Two people on the same song. Players must not be told during a
         // live round, so this is the commissioner's problem to spot.
-        const { rows: clashes } = await db.query(
-          'select * from round_collisions($1)', [req.round.id]
-        );
+        const { rows: clashes } = showSongs
+          ? (await db.query('select * from round_collisions($1)',
+              [req.round.id])).rows
+          : (await db.query(
+              'select count(*)::int as n from round_collisions($1)',
+              [req.round.id])).rows.map((r) => ({ hidden: true, n: r.n }))
+              .filter((r) => r.n > 0);
 
         const { rows: adjustments } = await db.query(
           `select a.*, p.name, m.name as made_by_name
@@ -305,6 +317,7 @@ function router(db) {
         res.render('admin-round', {
           league: req.league,
           adjustments,
+          showSongs,
           round: req.round,
           clashes,
           bumps: Object.entries(BUMPS).map(([key, label]) => ({ key, label })),
