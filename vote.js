@@ -171,7 +171,7 @@ function router(db) {
       );
 
       const others = current
-        .filter((v) => v.submission_id !== submissionId)
+        .filter((v) => String(v.submission_id) !== String(submissionId))
         .reduce((n, v) => n + v.points, 0);
 
       if (others + points > round.points_per_voter) {
