@@ -1522,16 +1522,24 @@ a.chip:hover {
   letter-spacing: .09em;
   text-transform: uppercase;
   color: var(--steel);
-  margin-left: auto;
   padding-left: .5rem;
   white-space: nowrap;
+}
+
+.bar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-shrink: 0;
 }
 
 @media (max-width: 30rem) {
   .bar { gap: .3rem; }
   .bar__back,
   .bar__admin { font-size: .6rem; padding: .34rem .5rem; }
-  .bar__name { width: 100%; margin-left: 0; padding: .2rem 0 0; }
+  .bar__right { width: 100%; margin-left: 0; }
+  .bar__name { padding: .2rem 0 0; }
 }
 
 /* ---------------------------------------------------------------
