@@ -100,9 +100,28 @@
           <% if (s.comments.length) { %>
             <ul class="chatter">
               <% s.comments.forEach(function (c) { %>
-                <li class="chatter__line">
-                  <span class="chatter__who"><%= c.author %></span>
-                  <%= c.body %>
+                <li class="chatter__line" data-comment-id="<%= c.id %>">
+                  <div class="chatter__top">
+                    <span class="chatter__who"><%= c.author %></span>
+                    <span class="chatter__body"><%= c.body %></span>
+                  </div>
+                  <% if (c.replies.length) { %>
+                    <ul class="chatter chatter--replies">
+                      <% c.replies.forEach(function (r) { %>
+                        <li class="chatter__line chatter__line--reply" data-reply-id="<%= r.id %>">
+                          <span class="chatter__who"><%= r.author %></span>
+                          <span class="chatter__body"><%= r.body %></span>
+                        </li>
+                      <% }) %>
+                    </ul>
+                  <% } %>
+                  <div class="reply-thread" data-comment="<%= c.id %>" data-round="<%= round.id %>">
+                    <button class="reply-toggle" type="button">&#8629; Reply</button>
+                    <form class="reply-form" hidden>
+                      <input class="reply-input" type="text" maxlength="500" placeholder="Add a reply&hellip;" autocomplete="off">
+                      <button class="chip reply-send" type="submit">Send</button>
+                    </form>
+                  </div>
                 </li>
               <% }) %>
             </ul>
@@ -126,9 +145,69 @@
     </div>
 
     <p class="fineprint">
-      Comments stay anonymous. You can see what was said, never who said it.
+      Comments were anonymous during voting. Authors and replies are visible here.
     </p>
 
   </main>
 
+<script>
+(function () {
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  document.querySelectorAll('.reply-thread').forEach(function (thread) {
+    var toggle    = thread.querySelector('.reply-toggle');
+    var form      = thread.querySelector('.reply-form');
+    var input     = thread.querySelector('.reply-input');
+    var commentId = thread.dataset.comment;
+    var roundId   = thread.dataset.round;
+
+    toggle.addEventListener('click', function () {
+      form.hidden = !form.hidden;
+      if (!form.hidden) { input.focus(); }
+    });
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var body = input.value.trim();
+      if (!body) return;
+      toggle.disabled = true;
+
+      try {
+        var res  = await fetch('/round/' + roundId + '/reply', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ comment_id: commentId, body: body }),
+        });
+        var data = await res.json();
+        if (!data.ok) { alert(data.error); return; }
+
+        var li   = thread.closest('.chatter__line');
+        var list = li.querySelector('.chatter--replies');
+        if (!list) {
+          list = document.createElement('ul');
+          list.className = 'chatter chatter--replies';
+          li.insertBefore(list, thread);
+        }
+        var item = document.createElement('li');
+        item.className       = 'chatter__line chatter__line--reply';
+        item.dataset.replyId = data.reply.id;
+        item.innerHTML =
+          '<span class="chatter__who">'  + esc(data.reply.author) + '</span>' +
+          '<span class="chatter__body">' + esc(data.reply.body)   + '</span>';
+        list.appendChild(item);
+
+        input.value = '';
+        form.hidden = true;
+      } catch (err) {
+        alert('Could not post reply. Try again.');
+      } finally {
+        toggle.disabled = false;
+      }
+    });
+  });
+}());
+</script>
 <%- include('partials/foot') %>

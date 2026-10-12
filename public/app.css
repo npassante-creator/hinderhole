@@ -2343,3 +2343,61 @@ body.nowbar-open { padding-bottom: 5.5rem; }
   text-transform: uppercase;
   color: var(--oxblood);
 }
+
+/* ---------------------------------------------------------------
+   Reply threads (results page)
+   --------------------------------------------------------------- */
+
+.chatter--replies {
+  margin: .4rem 0 .5rem .75rem;
+  border-left: 2px solid var(--oxblood);
+  padding-left: .6rem;
+}
+
+.chatter__line--reply {
+  background: transparent;
+  padding: .25rem 0;
+  margin-bottom: .1rem;
+}
+
+.reply-thread {
+  margin-top: .35rem;
+}
+
+.reply-toggle {
+  background: none;
+  border: none;
+  color: var(--steel);
+  font-family: var(--util);
+  font-size: .64rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1.4;
+}
+
+.reply-toggle:hover { color: var(--amber); }
+.reply-toggle:disabled { opacity: .5; cursor: default; }
+
+.reply-form {
+  display: flex;
+  gap: .4rem;
+  margin-top: .4rem;
+  align-items: center;
+}
+
+.reply-input {
+  flex: 1;
+  background: var(--field);
+  border: 1px solid var(--steel);
+  border-radius: var(--strip-radius);
+  color: var(--stock);
+  font-family: var(--body);
+  font-size: .88rem;
+  padding: .3rem .5rem;
+  min-width: 0;
+}
+
+.reply-input::placeholder { color: var(--steel); }
+.reply-input:focus { outline: 2px solid var(--amber); border-color: transparent; }

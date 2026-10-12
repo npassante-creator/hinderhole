@@ -13,6 +13,7 @@
 
 const express = require('express');
 const { requireAuth } = require('./auth');
+const json = express.json();
 
 function router(db) {
   const r = express.Router();
@@ -75,9 +76,9 @@ function router(db) {
         [round.id, req.player.id]
       );
 
-      // Comments are attributed to nobody, on purpose.
+      // Comments attributed once the round is revealed.
       const { rows: comments } = await db.query(
-        `select c.submission_id, c.body, p.name as author
+        `select c.id, c.submission_id, c.body, p.name as author
            from comments c
            join players p on p.id = c.author_id
           where c.round_id = $1
@@ -85,10 +86,31 @@ function router(db) {
         [round.id]
       );
 
+      const { rows: replyRows } = await db.query(
+        `select r.id, r.comment_id, r.body, p.name as author
+           from comment_replies r
+           join players p on p.id = r.author_id
+           join comments c on c.id = r.comment_id
+          where c.round_id = $1
+          order by r.created_at`,
+        [round.id]
+      );
+
+      const replyByComment = new Map();
+      replyRows.forEach((r) => {
+        if (!replyByComment.has(r.comment_id)) replyByComment.set(r.comment_id, []);
+        replyByComment.get(r.comment_id).push({ id: r.id, body: r.body, author: r.author });
+      });
+
       const bySong = new Map();
       comments.forEach((c) => {
         if (!bySong.has(c.submission_id)) bySong.set(c.submission_id, []);
-        bySong.get(c.submission_id).push({ body: c.body, author: c.author });
+        bySong.get(c.submission_id).push({
+          id: c.id,
+          body: c.body,
+          author: c.author,
+          replies: replyByComment.get(c.id) || [],
+        });
       });
 
       // Points left unspent come off that player's own score.
@@ -236,6 +258,81 @@ function router(db) {
         payouts,
         revealedCount: rounds.filter((x) => x.status === 'revealed').length,
       });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Comment replies (revealed rounds only; names visible)
+  // ---------------------------------------------------------------
+
+  r.post('/round/:id/reply', requireAuth, loadRound, json, async (req, res, next) => {
+    try {
+      const round = req.round;
+      if (round.status !== 'revealed') {
+        return res.status(409).json({ error: 'Replies are only available after a round is revealed.' });
+      }
+      const commentId = Number(req.body.comment_id);
+      const body      = String(req.body.body || '').trim();
+
+      if (!Number.isInteger(commentId) || commentId <= 0) {
+        return res.status(400).json({ error: 'Unknown comment.' });
+      }
+      if (!body) return res.status(400).json({ error: 'Reply cannot be empty.' });
+
+      const { rows: check } = await db.query(
+        'select id from comments where id = $1 and round_id = $2',
+        [commentId, round.id]
+      );
+      if (!check[0]) return res.status(404).json({ error: 'Comment not found.' });
+
+      const { rows: [reply] } = await db.query(
+        `insert into comment_replies (comment_id, author_id, body)
+         values ($1, $2, $3)
+         returning id, body`,
+        [commentId, req.player.id, body.slice(0, 500)]
+      );
+
+      res.json({ ok: true, reply: { id: reply.id, body: reply.body, author: req.player.name } });
+    } catch (err) {
+      if (err.code === 'P0001') return res.status(409).json({ error: err.message });
+      next(err);
+    }
+  });
+
+  r.delete('/reply/:id', requireAuth, async (req, res, next) => {
+    try {
+      const replyId = Number(req.params.id);
+      if (!Number.isInteger(replyId) || replyId <= 0) {
+        return res.status(400).json({ error: 'Unknown reply.' });
+      }
+
+      // Author can always delete their own reply.
+      const { rows } = await db.query(
+        'delete from comment_replies where id = $1 and author_id = $2 returning id',
+        [replyId, req.player.id]
+      );
+      if (rows[0]) return res.json({ ok: true });
+
+      // Admins can delete any reply in their league.
+      const { rows: adminCheck } = await db.query(
+        `select 1
+           from comment_replies cr
+           join comments c    on c.id  = cr.comment_id
+           join rounds rd     on rd.id = c.round_id
+           join memberships m on m.league_id = rd.league_id
+                              and m.player_id = $2
+                              and m.is_admin
+          where cr.id = $1`,
+        [replyId, req.player.id]
+      );
+      if (adminCheck[0]) {
+        await db.query('delete from comment_replies where id = $1', [replyId]);
+        return res.json({ ok: true });
+      }
+
+      res.status(403).json({ error: 'Not your reply.' });
     } catch (err) {
       next(err);
     }
