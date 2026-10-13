@@ -2469,3 +2469,30 @@ body.nowbar-open { padding-bottom: 5.5rem; }
   text-transform: uppercase;
   color: var(--steel);
 }
+
+/* ---------------------------------------------------------------
+   Player name reveal (admin song view)
+   --------------------------------------------------------------- */
+
+.grid__who {
+  display: inline;
+}
+
+.grid__who-sum {
+  font-family: var(--util);
+  font-size: .6rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--amber);
+  cursor: pointer;
+  list-style: none;
+  border-bottom: 1px solid currentColor;
+}
+
+.grid__who-sum::-webkit-details-marker { display: none; }
+.grid__who-sum::marker              { display: none; }
+
+/* once opened, hide the summary so only the name shows */
+.grid__who[open] > .grid__who-sum {
+  display: none;
+}

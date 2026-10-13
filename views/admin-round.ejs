@@ -184,8 +184,16 @@
         <% people.forEach(function (p) { %>
           <tr class="<%= p.submission_id ? '' : 'grid__row--missing' %>">
             <td>
-              <span class="grid__name"><%= p.name %></span>
-              <% if (p.is_late) { %><span class="tag tag--late">late</span><% } %>
+              <% if (showSongs) { %>
+                <details class="grid__who">
+                  <summary class="grid__who-sum">reveal</summary>
+                  <span class="grid__name"><%= p.name %></span>
+                  <% if (p.is_late) { %><span class="tag tag--late">late</span><% } %>
+                </details>
+              <% } else { %>
+                <span class="grid__name"><%= p.name %></span>
+                <% if (p.is_late) { %><span class="tag tag--late">late</span><% } %>
+              <% } %>
             </td>
             <td>
               <% if (p.submission_id && !showSongs) { %>
