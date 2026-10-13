@@ -269,6 +269,7 @@ function router(db) {
         // query entirely unless they ask, rather than fetched and hidden.
         const showSongs = req.query.songs === '1' ||
                           req.round.status === 'revealed';
+        const showDupes = showSongs || req.query.dupes === '1';
 
         const { rows: people } = await db.query(
           `select p.id, p.name, p.email,
@@ -295,13 +296,24 @@ function router(db) {
 
         // Two people on the same song. Players must not be told during a
         // live round, so this is the commissioner's problem to spot.
-        const { rows: clashes } = showSongs
-          ? (await db.query('select * from round_collisions($1)',
-              [req.round.id])).rows
-          : (await db.query(
-              'select count(*)::int as n from round_collisions($1)',
-              [req.round.id])).rows.map((r) => ({ hidden: true, n: r.n }))
-              .filter((r) => r.n > 0);
+        let clashes;
+        if (showDupes) {
+          const { rows } = await db.query(
+            'select * from round_collisions($1)', [req.round.id]);
+          clashes = rows.map((c) => ({
+            ...c,
+            a_submitted_at_fmt: fmt(c.a_submitted_at),
+            b_submitted_at_fmt: fmt(c.b_submitted_at),
+            a_first: !c.b_submitted_at ||
+              (c.a_submitted_at && c.a_submitted_at <= c.b_submitted_at),
+          }));
+        } else {
+          const { rows } = await db.query(
+            'select count(*)::int as n from round_collisions($1)', [req.round.id]);
+          clashes = rows
+            .map((r) => ({ hidden: true, n: r.n }))
+            .filter((r) => r.n > 0);
+        }
 
         const { rows: adjustments } = await db.query(
           `select a.*, p.name, m.name as made_by_name
@@ -318,6 +330,7 @@ function router(db) {
           league: req.league,
           adjustments,
           showSongs,
+          showDupes,
           round: req.round,
           clashes,
           bumps: Object.entries(BUMPS).map(([key, label]) => ({ key, label })),

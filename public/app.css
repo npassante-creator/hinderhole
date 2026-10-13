@@ -2409,3 +2409,63 @@ body.nowbar-open { padding-bottom: 5.5rem; }
 
 .reply-input::placeholder { color: var(--steel); }
 .reply-input:focus { outline: 2px solid var(--amber); border-color: transparent; }
+
+/* ---------------------------------------------------------------
+   Duplicate clash reveal
+   --------------------------------------------------------------- */
+
+.echo__reveal {
+  color: var(--amber);
+  font-family: var(--util);
+  font-size: .65rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+
+.echo__reveal:hover { opacity: .75; }
+
+.echo__clash {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  padding: .5rem 0;
+}
+
+.echo__pair {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.echo__side {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  padding: .45rem .65rem;
+  border-left: 3px solid transparent;
+  border-radius: 2px;
+  background: rgba(240, 232, 216, .04);
+}
+
+.echo__side--first {
+  border-left-color: #5a8a5a;
+}
+
+.echo__side--second {
+  border-left-color: var(--oxblood);
+}
+
+.echo__song {
+  font-size: .8rem;
+  color: var(--stock);
+}
+
+.echo__ts {
+  font-family: var(--util);
+  font-size: .6rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--steel);
+}

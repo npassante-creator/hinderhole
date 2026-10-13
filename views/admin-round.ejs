@@ -73,18 +73,30 @@
         <ul class="echo__list">
           <% clashes.forEach(function (c) { %>
             <% if (c.hidden) { %>
-              <li><%= c.n %> possible duplicate<%= c.n === 1 ? "" : "s" %> in this round. Show the songs to see them.</li>
+              <li>
+                <%= c.n %> possible duplicate<%= c.n === 1 ? "" : "s" %> in this round.
+                <a class="echo__reveal" href="/admin/round/<%= round.id %>?dupes=1">Show who</a>
+              </li>
             <% } else { %>
-            <li>
-              <strong><%= c.a_player %></strong> (<%= c.a_title %>)
-              and <strong><%= c.b_player %></strong> (<%= c.b_title %>)
+            <li class="echo__clash">
               <span class="echo__how"><%= c.how %></span>
+              <span class="echo__pair">
+                <span class="echo__side <% if (c.a_first) { %>echo__side--first<% } else { %>echo__side--second<% } %>">
+                  <strong><%= c.a_player %></strong>
+                  <span class="echo__song"><%= c.a_title %></span>
+                  <span class="echo__ts"><%= c.a_submitted_at_fmt %> &middot; <%= c.a_first ? "submitted first" : "needs to change" %></span>
+                </span>
+                <span class="echo__side <% if (!c.a_first) { %>echo__side--first<% } else { %>echo__side--second<% } %>">
+                  <strong><%= c.b_player %></strong>
+                  <span class="echo__song"><%= c.b_title %></span>
+                  <span class="echo__ts"><%= c.b_submitted_at_fmt %> &middot; <% if (!c.a_first) { %>submitted first<% } else { %>needs to change<% } %></span>
+                </span>
+              </span>
             </li>
             <% } %>
           <% }) %>
         </ul>
-        Nobody else can see this. Matching is fuzzy, so check before you
-        say anything.
+        Nobody else can see this. Matching is fuzzy, so check before you say anything.
       </div>
     <% } %>
 
