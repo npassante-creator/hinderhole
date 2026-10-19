@@ -264,6 +264,43 @@ function router(db) {
   });
 
   // ---------------------------------------------------------------
+  // Top-level comments (revealed rounds only)
+  // ---------------------------------------------------------------
+
+  r.post('/round/:id/comment', requireAuth, loadRound, json, async (req, res, next) => {
+    try {
+      const round = req.round;
+      if (round.status !== 'revealed') {
+        return res.status(409).json({ error: 'Comments are only available after a round is revealed.' });
+      }
+      const submissionId = Number(req.body.submission_id);
+      const body         = String(req.body.body || '').trim();
+
+      if (!Number.isInteger(submissionId) || submissionId <= 0) {
+        return res.status(400).json({ error: 'Unknown submission.' });
+      }
+      if (!body) return res.status(400).json({ error: 'Comment cannot be empty.' });
+
+      const { rows: check } = await db.query(
+        'select id from submissions where id = $1 and round_id = $2',
+        [submissionId, round.id]
+      );
+      if (!check[0]) return res.status(404).json({ error: 'Submission not found.' });
+
+      const { rows: [comment] } = await db.query(
+        `insert into comments (submission_id, round_id, author_id, body)
+         values ($1, $2, $3, $4)
+         returning id, body`,
+        [submissionId, round.id, req.player.id, body.slice(0, 500)]
+      );
+
+      res.json({ ok: true, comment: { id: comment.id, body: comment.body, author: req.player.name } });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Comment replies (revealed rounds only; names visible)
   // ---------------------------------------------------------------
 

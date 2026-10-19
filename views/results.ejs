@@ -97,7 +97,6 @@
             </blockquote>
           <% } %>
 
-          <% if (s.comments.length) { %>
             <ul class="chatter">
               <% s.comments.forEach(function (c) { %>
                 <li class="chatter__line" data-comment-id="<%= c.id %>">
@@ -125,7 +124,13 @@
                 </li>
               <% }) %>
             </ul>
-          <% } %>
+          <div class="add-comment" data-submission="<%= s.id %>" data-round="<%= round.id %>">
+            <button class="comment-toggle" type="button">&#43; Leave a comment</button>
+            <form class="comment-form" hidden>
+              <input class="comment-input" type="text" maxlength="500" placeholder="Add a comment…" autocomplete="off">
+              <button class="chip comment-send" type="submit">Send</button>
+            </form>
+          </div>
 
         </li>
       <% }) %>
@@ -157,7 +162,8 @@
             .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
-  document.querySelectorAll('.reply-thread').forEach(function (thread) {
+  function wireReplyThread(thread) {
+
     var toggle    = thread.querySelector('.reply-toggle');
     var form      = thread.querySelector('.reply-form');
     var input     = thread.querySelector('.reply-input');
@@ -167,7 +173,7 @@
     toggle.addEventListener('click', function () {
       form.hidden = !form.hidden;
       if (!form.hidden) { input.focus(); }
-    });
+    }
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -208,6 +214,88 @@
       }
     });
   });
+  }
+  document.querySelectorAll('.reply-thread').forEach(wireReplyThread);
 }());
+
+  // ── escHtml helper (safe to define even if it already exists elsewhere) ───
+  if (typeof escHtml === 'undefined') {
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  }
+
+  // ── top-level comment forms ───────────────────────────────────────────────
+  document.querySelectorAll('.add-comment').forEach(function (widget) {
+    var toggle = widget.querySelector('.comment-toggle');
+    var form   = widget.querySelector('.comment-form');
+    var input  = widget.querySelector('.comment-input');
+
+    toggle.addEventListener('click', function () {
+      form.hidden = !form.hidden;
+      if (!form.hidden) input.focus();
+    });
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var body = input.value.trim();
+      if (!body) return;
+      var submissionId = widget.dataset.submission;
+      var roundId      = widget.dataset.round;
+
+      var btn = form.querySelector('.comment-send');
+      btn.disabled = true;
+
+      try {
+        var resp = await fetch('/round/' + roundId + '/comment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ submission_id: submissionId, body: body })
+        });
+        var data = await resp.json();
+        if (!resp.ok) { alert(data.error || 'Error posting comment.'); return; }
+
+        // Find (or create) the chatter list for this song
+        var song   = widget.closest('.song, .result-song, [data-song-id]') || widget.parentElement;
+        var ul     = song.querySelector('.chatter');
+        if (!ul) {
+          ul = document.createElement('ul');
+          ul.className = 'chatter';
+          widget.parentElement.insertBefore(ul, widget);
+        }
+
+        var li = document.createElement('li');
+        li.className = 'chatter__line';
+        li.dataset.commentId = data.comment.id;
+        li.innerHTML =
+          '<div class="chatter__top">' +
+            '<span class="chatter__who">' + escHtml(data.comment.author) + '</span>' +
+            '<span class="chatter__body">' + escHtml(data.comment.body) + '</span>' +
+          '</div>' +
+          '<div class="reply-thread" data-comment="' + data.comment.id + '" data-round="' + roundId + '">' +
+            '<button class="reply-toggle" type="button">&#8629; Reply</button>' +
+            '<form class="reply-form" hidden>' +
+              '<input class="reply-input" type="text" maxlength="500" placeholder="Add a reply…" autocomplete="off">' +
+              '<button class="chip reply-send" type="submit">Send</button>' +
+            '</form>' +
+          '</div>';
+        ul.appendChild(li);
+
+        // Wire up reply thread if the helper exists (defined by step 4 refactor)
+        var newThread = li.querySelector('.reply-thread');
+        if (newThread && typeof wireReplyThread === 'function') {
+          wireReplyThread(newThread);
+        }
+
+        input.value = '';
+        form.hidden = true;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
 </script>
 <%- include('partials/foot') %>
