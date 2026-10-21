@@ -18,11 +18,9 @@
 
 const crypto = require('crypto');
 const express = require('express');
-const sgMail = require('@sendgrid/mail');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
 
 const LINK_TTL_MIN = 20;          // magic link lifetime
 const SESSION_TTL_DAYS = 90;      // longer than a 10 week season
@@ -78,12 +76,12 @@ async function requestLoginLink(db, email, { ip } = {}) {
 }
 
 async function sendLinkEmail(player, url) {
-  if (!process.env.SENDGRID_API_KEY) {
+  if (!process.env.RESEND_API_KEY) {
     console.log(`[auth] dev login link for ${player.email}: ${url}`);
     return;
   }
 
-  await sgMail.send({
+  await resend.emails.send({
     to: player.email,
     from: process.env.MAIL_FROM,
     subject: 'Your Music League sign in link',
