@@ -1,21 +1,5 @@
 <%- include('partials/head', { title: 'Holy Hinder Hole Sound Society' }) %>
 
-  <header class="bar">
-    <a class="bar__back" href="/chat">Chat</a>
-    <a class="bar__back" href="/me">My picks</a>
-    <a class="bar__back" href="/upcoming">Coming up</a>
-    <a class="bar__back" href="/standings">Standings</a>
-    <a class="bar__back" href="/categories">Suggest rounds</a>
-    <a class="bar__back" href="/stats">Stats</a>
-    <div class="bar__right">
-      <span class="bar__name"><%= player.name %></span>
-      <% if (typeof isAdmin !== "undefined" && isAdmin) { %><a class="bar__admin" href="/admin">Commissioner</a><% } %>
-      <form method="post" action="/auth/logout">
-        <button class="bar__out" type="submit">Sign out</button>
-      </form>
-    </div>
-  </header>
-
   <% if (!league) { %>
     <main class="panel">
       <div class="strip strip--message">
@@ -24,45 +8,164 @@
     </main>
   <% } else { %>
 
-    <header class="marquee marquee--small">
-      <p class="marquee__eyebrow"><%= league.name %></p>
-      <h1 class="marquee__title"><span>Holy Hinder Hole</span><span>Sound Society</span></h1>
-    </header>
+    <div class="home">
+      <section class="home__main">
 
-    <% if (current) { %>
-      <section class="now">
-        <p class="now__label">
-          <%= current.status === 'submitting' ? 'Now taking songs' : 'Now voting' %>
-        </p>
-        <h2 class="now__title"><%= current.title %></h2>
-        <p class="now__due">
-          <%= current.status === 'submitting' ? 'Songs due' : 'Votes due' %>
-          <%= current.status === 'submitting' ? current.submitBy : current.voteBy %>
-          <% if (current.daysLeft) { %>
-            <span class="now__count"><%= current.daysLeft %> day<%= current.daysLeft === 1 ? '' : 's' %> left</span>
-          <% } %>
-        </p>
-      </section>
-    <% } %>
-
-    <main class="panel">
-      <h2 class="rack__heading">The season</h2>
-      <ol class="rack">
-        <% rounds.forEach(function (r) { %>
-          <li class="strip strip--round strip--<%= r.status %> <%= r.status === 'draft' ? '' : 'strip--link' %>">
-            <% if (r.status !== 'draft') { %><a class="strip__hit" href="/round/<%= r.id %><%= r.status === 'voting' ? '/vote' : (r.status === 'revealed' ? '/results' : '') %>"></a><% } %>
-            <span class="strip__code"><%= String(r.round_number).padStart(2, '0') %></span>
-            <div class="strip__body">
-              <h3 class="strip__title"><%= r.title %></h3>
-              <p class="strip__meta">
-                Songs <%= r.submitBy %> &middot; Votes <%= r.voteBy %>
+        <% if (submitting) { %>
+          <div class="live">
+            <div class="live__top">
+              <p class="live__eyebrow">
+                Round <%= String(submitting.round_number).padStart(2, '0') %> of <%= rounds.length %>
+                &middot; now taking songs
+              </p>
+              <p class="live__due">
+                Songs due <%= submitting.submitBy %>
+                <% if (submitting.daysLeft) { %>
+                  <span class="live__count"><%= submitting.daysLeft %> day<%= submitting.daysLeft === 1 ? '' : 's' %> left</span>
+                <% } %>
               </p>
             </div>
-            <span class="strip__state"><%= r.stateLabel %></span>
-          </li>
-        <% }) %>
-      </ol>
-    </main>
+            <h1 class="live__title"><%= submitting.title %></h1>
+            <div class="live__progress">
+              <span class="live__meter"><span class="live__fill" style="width: <%= Math.min(100, Math.round(inCount / Math.max(1, rosterSize) * 100)) %>%"></span></span>
+              <span class="live__of"><%= inCount %> of <%= rosterSize %> in</span>
+            </div>
+            <% if (myPick) { %>
+              <a class="mypick" href="/round/<%= submitting.id %>">
+                <span class="mypick__tag">Your<br>pick</span>
+                <span class="mypick__body">
+                  <span class="mypick__title"><%= myPick.title || 'Your song' %></span>
+                  <span class="mypick__meta"><%= myPick.artist || 'Unknown artist' %></span>
+                </span>
+                <span class="mypick__go">Change</span>
+              </a>
+            <% } else { %>
+              <a class="live__cta" href="/round/<%= submitting.id %>">Pick your song</a>
+            <% } %>
+          </div>
+        <% } %>
+
+        <% if (voting) { %>
+          <div class="live live--vote">
+            <div class="live__top">
+              <p class="live__eyebrow">
+                Round <%= String(voting.round_number).padStart(2, '0') %> &middot; voting open
+              </p>
+              <p class="live__due">
+                Votes due <%= voting.voteBy %>
+                <% if (voting.daysLeft) { %>
+                  <span class="live__count"><%= voting.daysLeft %> day<%= voting.daysLeft === 1 ? '' : 's' %> left</span>
+                <% } %>
+              </p>
+            </div>
+            <h2 class="live__title"><%= voting.title %></h2>
+            <% if (myVote) { %>
+              <div class="live__progress">
+                <span class="live__meter"><span class="live__fill" style="width: <%= Math.min(100, Math.round(myVote.spent / Math.max(1, myVote.budget) * 100)) %>%"></span></span>
+                <span class="live__of">You've spent <%= myVote.spent %> of <%= myVote.budget %></span>
+              </div>
+            <% } %>
+            <a class="live__cta" href="/round/<%= voting.id %>/vote"><%= myVote && myVote.spent >= myVote.budget ? 'Review my votes' : 'Listen and vote' %></a>
+          </div>
+        <% } %>
+
+        <% if (last && last.winner) { %>
+          <div class="lastround">
+            <div class="lastround__body">
+              <p class="lastround__eyebrow">
+                Last round &middot; <%= String(last.round.round_number).padStart(2, '0') %> <%= last.round.title %>
+              </p>
+              <p class="lastround__song"><%= last.winner.title %></p>
+              <p class="lastround__who">
+                <%= last.winner.artist || 'Unknown artist' %> &middot;
+                <%= last.winner.submitter %> took it with <%= last.winner.points %> points
+              </p>
+            </div>
+            <div class="lastround__side">
+              <% if (last.mine) { %>
+                <p class="lastround__me">
+                  <span class="lastround__place"><%= last.mine.place %></span>
+                  <span class="lastround__pts">You &middot; <%= last.mine.points %> pts</span>
+                </p>
+              <% } %>
+              <a class="lastround__go" href="/round/<%= last.round.id %>/results">See results</a>
+            </div>
+          </div>
+        <% } %>
+
+        <div class="season" id="rounds">
+          <div class="season__head">
+            <h2 class="rack__heading">Every round</h2>
+            <span class="season__note"><%= revealedCount %> of <%= rounds.length %> revealed</span>
+          </div>
+          <ol class="season__grid">
+            <% rounds.forEach(function (r) { %>
+              <li>
+                <% if (r.href) { %><a class="tile tile--<%= r.status %>" href="<%= r.href %>"><% } else { %><span class="tile tile--draft"><% } %>
+                  <span class="tile__code"><%= String(r.round_number).padStart(2, '0') %></span>
+                  <span class="tile__body">
+                    <span class="tile__title"><%= r.title %></span>
+                    <span class="tile__meta">
+                      <% if (r.status === 'revealed' && r.mine) { %>
+                        You: <%= r.mine.place %> of <%= r.mine.of %> &middot; <%= r.mine.points %> pts
+                      <% } else if (r.status === 'revealed') { %>
+                        Results are up
+                      <% } else if (r.status === 'submitting') { %>
+                        Songs due <%= r.submitBy %>
+                      <% } else if (r.status === 'voting') { %>
+                        Votes due <%= r.voteBy %>
+                      <% } else { %>
+                        Songs <%= r.submitBy %>
+                      <% } %>
+                    </span>
+                  </span>
+                  <span class="tile__state"><%= r.status === 'revealed' ? 'Results' : r.stateLabel %></span>
+                <% if (r.href) { %></a><% } else { %></span><% } %>
+              </li>
+            <% }) %>
+          </ol>
+        </div>
+      </section>
+
+      <aside class="home__side">
+        <div class="sidecard">
+          <div class="sidecard__head">
+            <h2 class="rack__heading">Standings</h2>
+            <span class="sidecard__note">after <%= revealedCount %> round<%= revealedCount === 1 ? '' : 's' %></span>
+          </div>
+          <ol class="mini">
+            <% top.forEach(function (row) { %>
+              <li class="mini__row<%= String(row.id) === String(player.id) ? ' mini__row--me' : '' %>">
+                <span class="mini__place"><%= row.place %></span>
+                <span class="mini__name"><%= row.name %></span>
+                <span class="mini__pts"><%= row.points %></span>
+              </li>
+            <% }) %>
+            <% if (meRow) { %>
+              <li class="mini__gap" aria-hidden="true">&middot; &middot; &middot;</li>
+              <li class="mini__row mini__row--me">
+                <span class="mini__place"><%= meRow.place %></span>
+                <span class="mini__name"><%= meRow.name %></span>
+                <span class="mini__pts"><%= meRow.points %></span>
+              </li>
+            <% } %>
+          </ol>
+          <a class="sidecard__link" href="/standings">Full standings</a>
+        </div>
+
+        <a class="promo" href="/playlists">
+          <span class="promo__eyebrow">New for season's end</span>
+          <span class="promo__title">Everybody's playlist</span>
+          <span class="promo__body">Every pick from every player, ready to play front to back.</span>
+        </a>
+
+        <div class="sidecard sidecard--links">
+          <a class="sidecard__row" href="/me">My picks</a>
+          <a class="sidecard__row" href="/upcoming">Coming up and my shortlist</a>
+          <a class="sidecard__row" href="/stats">Season stats</a>
+        </div>
+      </aside>
+    </div>
 
   <% } %>
 

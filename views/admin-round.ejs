@@ -1,13 +1,12 @@
-<%- include('partials/head', { title: 'Round ' + round.round_number + ' - Commissioner' }) %>
+<%- include('partials/head', { title: 'Round ' + round.round_number + ' - Commissioner', wide: true }) %>
 
-  <header class="bar">
-    <a class="bar__back" href="/admin">Commissioner</a>
-    <span class="bar__name"><%= player.name %></span>
-  </header>
 
-  <header class="marquee marquee--small">
-    <p class="marquee__eyebrow">Round <%= String(round.round_number).padStart(2, '0') %> &middot; <%= round.status %></p>
-    <h1 class="marquee__title"><span><%= round.title %></span></h1>
+  <header class="pagehead">
+    <p class="pagehead__crumbs">
+      <a href="/admin">Commissioner</a> <span aria-hidden="true">/</span>
+      Round <%= String(round.round_number).padStart(2, '0') %> &middot; <%= round.status %><% if (round.on_hold) { %> &middot; on hold<% } %>
+    </p>
+    <h1 class="pagehead__title"><%= round.title %></h1>
   </header>
 
   <main class="panel">
@@ -25,45 +24,41 @@
     <h2 class="rack__heading">Give them more time</h2>
 
     <div class="extend">
-      <p class="extend__label">Push the song deadline back</p>
-      <p class="moves">
-        <% bumps.forEach(function (b) { %>
-          <form method="post" action="/admin/round/<%= round.id %>/extend">
-            <input type="hidden" name="which" value="submit">
-            <input type="hidden" name="by" value="<%= b.key %>">
-            <input type="hidden" name="shift" value="1">
-            <button class="chip" type="submit">+<%= b.label %></button>
-          </form>
-        <% }) %>
-      </p>
-      <p class="fineprint">
-        Moves the voting deadline by the same amount, so the listening window
-        stays five days.
-      </p>
+      <form class="extendform" method="post" action="/admin/round/<%= round.id %>/extend">
+        <label class="ctl__field">
+          <span class="ctl__label">How much</span>
+          <select class="field__input" name="by">
+            <% bumps.forEach(function (b) { %>
+              <option value="<%= b.key %>" <%= b.key === '1d' ? 'selected' : '' %>>+<%= b.label %></option>
+            <% }) %>
+          </select>
+        </label>
+        <fieldset class="extendform__which">
+          <legend class="ctl__label">Which deadline</legend>
+          <label class="extendform__opt">
+            <input type="radio" name="which" value="submit" <%= round.status === 'voting' ? '' : 'checked' %>>
+            <span>Songs <span class="extendform__hint">votes move too, so listening stays five days</span></span>
+          </label>
+          <label class="extendform__opt">
+            <input type="radio" name="which" value="vote" <%= round.status === 'voting' ? 'checked' : '' %>>
+            <span>Votes only</span>
+          </label>
+        </fieldset>
+        <input type="hidden" name="shift" value="1">
+        <button class="button" type="submit">Apply</button>
+      </form>
 
-      <p class="extend__label">Push the voting deadline only</p>
-      <p class="moves">
-        <% bumps.forEach(function (b) { %>
-          <form method="post" action="/admin/round/<%= round.id %>/extend">
-            <input type="hidden" name="which" value="vote">
-            <input type="hidden" name="by" value="<%= b.key %>">
-            <button class="chip" type="submit">+<%= b.label %></button>
-          </form>
-        <% }) %>
-      </p>
-
-      <p class="extend__label">Or stop the clock on this round</p>
-      <p class="moves">
+      <div class="setting">
+        <span class="setting__text">
+          <span class="setting__name">Stop the clock</span>
+          <span class="setting__sub">A held round sits where it is until you move it by hand. The rest of the season carries on.</span>
+        </span>
         <form method="post" action="/admin/round/<%= round.id %>/hold">
           <button class="chip <%= round.on_hold ? 'chip--on' : '' %>" type="submit">
             <%= round.on_hold ? 'on hold' : 'hold this round' %>
           </button>
         </form>
-      </p>
-      <p class="fineprint">
-        A held round sits where it is until you move it by hand. The rest of
-        the season carries on as normal.
-      </p>
+      </div>
     </div>
 
     <% if (typeof clashes !== 'undefined' && clashes.length) { %>
@@ -176,6 +171,7 @@
       </p>
     <% } %>
 
+    <div class="tablewrap">
     <table class="grid">
       <thead>
         <tr><th>Player</th><th>Song</th><th>Voted</th><th>Extension</th></tr>
@@ -206,7 +202,9 @@
               <% } %>
             </td>
             <td class="grid__spent">
-              <% if (!p.eligible) { %>
+              <% if (round.status === 'draft' || round.status === 'submitting') { %>
+                <span class="grid__sub">&mdash;</span>
+              <% } else if (!p.eligible) { %>
                 <span class="grid__sub">not eligible</span>
               <% } else if (p.spent >= budget) { %>
                 <span class="grid__done"><%= p.spent %>/<%= budget %></span>
@@ -229,6 +227,7 @@
         <% }) %>
       </tbody>
     </table>
+    </div>
 
     <p class="fineprint">
       An extension lets someone vote this round even though their song was

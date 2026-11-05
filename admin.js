@@ -139,7 +139,8 @@ function router(db) {
     try {
       const { rows: rounds } = await db.query(
         `select r.*,
-                (select count(*)::int from submissions s where s.round_id = r.id) as submitted
+                (select count(*)::int from submissions s where s.round_id = r.id) as submitted,
+                (select count(distinct v.voter_id)::int from votes v where v.round_id = r.id) as voted
            from rounds r
           where r.league_id = $1
           order by r.round_number`,
@@ -155,7 +156,7 @@ function router(db) {
         `select a.action, a.detail, a.created_at, p.name as actor
            from admin_actions a join players p on p.id = a.actor_id
           where a.league_id = $1
-          order by a.created_at desc limit 8`,
+          order by a.created_at desc limit 25`,
         [req.league.id]
       );
 
@@ -173,6 +174,8 @@ function router(db) {
           })),
         })),
         roster,
+        bumps: Object.entries(BUMPS).map(([key, label]) => ({ key, label })),
+        wide: true,
         recent: recent.map((x) => ({ ...x, when: fmt(x.created_at) })),
         paidCount: roster.filter((p) => p.dues_paid_at).length,
         error: req.query.err || null,

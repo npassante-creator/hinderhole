@@ -1,101 +1,110 @@
-<%- include('partials/head', { title: 'Results - ' + round.title }) %>
+<%- include('partials/head', { title: 'Results - ' + round.title, wide: true }) %>
 
-  <header class="bar">
-    <a class="bar__back" href="/">All rounds</a>
-    <a class="bar__back" href="/standings">Standings</a>
-    <span class="bar__name"><%= player.name %></span>
-  </header>
-
-  <header class="marquee marquee--small">
-    <p class="marquee__eyebrow">Round <%= String(round.round_number).padStart(2, '0') %> &middot; results</p>
-    <h1 class="marquee__title"><span><%= round.title %></span></h1>
+  <header class="pagehead">
+    <p class="pagehead__crumbs">
+      <a href="/#rounds">Rounds</a> <span aria-hidden="true">/</span>
+      Round <%= String(round.round_number).padStart(2, '0') %> results
+    </p>
+    <h1 class="pagehead__title"><%= round.title %></h1>
     <% if (round.description) { %>
-      <p class="marquee__sub"><%= round.description %></p>
+      <p class="pagehead__sub"><%= round.description %></p>
     <% } %>
   </header>
 
   <main class="panel">
 
-    <% if (winner) { %>
-      <div class="crown">
-        <p class="crown__label">Took the round</p>
-        <p class="crown__song"><%= winner.title %></p>
-        <p class="crown__who"><%= winner.submitter %> &middot; <%= winner.points %> points</p>
-      </div>
-    <% } %>
-
-    <dl class="facts">
-      <div class="facts__row">
-        <dt>Voted</dt>
-        <dd><%= turnout.voted %> of <%= turnout.roster %></dd>
-      </div>
-      <div class="facts__row">
-        <dt>Points cast</dt>
-        <dd><%= turnout.cast %></dd>
-      </div>
-      <div class="facts__row">
-        <dt>Songs</dt>
-        <dd><%= songs.length %></dd>
-      </div>
-    </dl>
-
-    <div class="queuebar">
-      <button class="queuebar__toggle" type="button">Play all</button>
-      <span class="queuebar__transport" hidden>
-        <button class="queuebar__btn" type="button" data-act="prev" aria-label="Previous song">&#9664;&#9664;</button>
-        <button class="queuebar__btn" type="button" data-act="playpause" aria-label="Pause">&#10074;&#10074;</button>
-        <button class="queuebar__btn" type="button" data-act="next" aria-label="Next song">&#9654;&#9654;</button>
-      </span>
-      <span class="queuebar__status"></span>
+    <div class="resulthead">
+      <% if (winner) { %>
+        <div class="resulthead__crown">
+          <p class="resulthead__label">Took the round</p>
+          <p class="resulthead__song"><%= winner.title %></p>
+          <p class="resulthead__who">
+            <%= winner.artist || 'Unknown artist' %> &middot; picked by
+            <strong><%= winner.submitter %></strong> &middot;
+            <%= winner.points %> points from <%= winner.backers %>
+          </p>
+        </div>
+      <% } %>
+      <dl class="resulthead__facts">
+        <div><dt>Voted</dt><dd><%= turnout.voted %>/<%= turnout.roster %></dd></div>
+        <div><dt>Points</dt><dd><%= turnout.cast %></dd></div>
+        <div><dt>Songs</dt><dd><%= songs.length %></dd></div>
+      </dl>
     </div>
 
-    <ol class="results">
-      <% songs.forEach(function (s) { %>
-        <li class="result <%= s.place === 1 ? 'result--top' : '' %> <%= s.is_mine ? 'result--mine' : '' %>">
+    <div class="queuebar queuebar--tools">
+      <button class="queuebar__toggle" type="button">Play all</button>
+      <span class="queuebar__status"></span>
+      <span class="queuebar__spacer"></span>
+      <button class="chip results__expand" type="button" aria-pressed="false">Open all comments</button>
+      <details class="dd dd--right dd--inline">
+        <summary class="chip">Take it with you
+          <svg class="dd__chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        </summary>
+        <div class="dd__panel dd__panel--narrow">
+          <a class="dd__item" href="/round/<%= round.id %>/youtube" target="_blank" rel="noopener"><span class="dd__label">YouTube playlist</span><span class="dd__sub">Every song as one playlist</span></a>
+          <a class="dd__item" href="/round/<%= round.id %>/export.txt"><span class="dd__label">Text list</span></a>
+          <a class="dd__item" href="/round/<%= round.id %>/export.csv"><span class="dd__label">CSV</span></a>
+          <a class="dd__item" href="/round/<%= round.id %>/export.m3u"><span class="dd__label">M3U</span></a>
+        </div>
+      </details>
+    </div>
 
-          <div class="result__head">
+    <ol class="results results--rows">
+      <% songs.forEach(function (s) {
+           var talk = s.comments.length;
+           s.comments.forEach(function (c) { talk += c.replies.length; });
+           var myComment = s.comments.filter(function (c) { return c.author === player.name; })[0];
+      %>
+        <li id="song-<%= s.id %>" class="result result--row <%= s.place === 1 ? 'result--top' : '' %> <%= s.is_mine ? 'result--mine' : '' %>">
+          <div class="result__line">
             <span class="result__place"><%= s.place %></span>
+            <div class="result__media"><%- include('partials/player', { sub: s }) %></div>
+            <div class="result__info">
+              <h2 class="result__title"><%= s.title %></h2>
+              <p class="result__artist">
+                <%= s.artist || 'Unknown artist' %>
+                <% if (s.is_mine) { %><span class="tag">you</span><% } %>
+                <% if (s.is_late) { %><span class="tag tag--late">late</span><% } %>
+                <% if (s.my_points > 0) { %><span class="tag tag--gave">you gave <%= s.my_points %></span><% } %>
+              </p>
+            </div>
+            <span class="result__submitter"><%= s.submitter %></span>
             <span class="result__score">
               <strong><%= s.points %></strong>
               <span class="result__backers">from <%= s.backers %></span>
             </span>
+            <button class="result__more" type="button" aria-expanded="false"
+                    aria-controls="extra-<%= s.id %>"
+                    aria-label="Comments on <%= s.title %>">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v8H6l-3 3v-3H2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+              <span class="result__talk"><%= talk %></span>
+              <svg class="result__chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+            </button>
           </div>
 
-          <h2 class="result__title"><%= s.title %></h2>
-          <p class="result__artist"><%= s.artist || 'Unknown artist' %></p>
-
-          <% if (s.adjustment) { %>
-            <p class="result__adjust">
-              <%= s.adjustment > 0 ? "+" : "" %><%= s.adjustment %>
-              from the commissioner:
-              <%= s.adjust_reasons.join("; ") %>
-            </p>
-          <% } %>
-
-          <% if (s.penalty) { %>
-            <p class="result__penalty">
-              <%= s.raw_points %> earned, <%= s.penalty %> deducted for
-              <%= s.penalty %> unspent vote<%= s.penalty === 1 ? "" : "s" %>
-            </p>
-          <% } %>
-
-          <p class="result__by">
-            <span class="result__submitter"><%= s.submitter %></span>
-            <% if (s.is_mine) { %><span class="tag">you</span><% } %>
-            <% if (s.is_late) { %><span class="tag tag--late">late</span><% } %>
-            <% if (s.my_points > 0) { %>
-              <span class="tag tag--gave">you gave <%= s.my_points %></span>
+          <div class="result__extra" id="extra-<%= s.id %>" hidden>
+            <% if (s.adjustment) { %>
+              <p class="result__adjust">
+                <%= s.adjustment > 0 ? "+" : "" %><%= s.adjustment %>
+                from the commissioner:
+                <%= s.adjust_reasons.join("; ") %>
+              </p>
             <% } %>
-          </p>
 
-          <%- include('partials/player', { sub: s }) %>
+            <% if (s.penalty) { %>
+              <p class="result__penalty">
+                <%= s.raw_points %> earned, <%= s.penalty %> deducted for
+                <%= s.penalty %> unspent vote<%= s.penalty === 1 ? "" : "s" %>
+              </p>
+            <% } %>
 
-          <% if (s.note) { %>
-            <blockquote class="result__note">
-              <%= s.note %>
-              <cite>&mdash; <%= s.submitter %></cite>
-            </blockquote>
-          <% } %>
+            <% if (s.note) { %>
+              <blockquote class="result__note">
+                <%= s.note %>
+                <cite><%= s.submitter %></cite>
+              </blockquote>
+            <% } %>
 
             <ul class="chatter">
               <% s.comments.forEach(function (c) { %>
@@ -117,37 +126,25 @@
                   <div class="reply-thread" data-comment="<%= c.id %>" data-round="<%= round.id %>">
                     <button class="reply-toggle" type="button">&#8629; Reply</button>
                     <form class="reply-form" hidden>
-                      <input class="reply-input" type="text" maxlength="500" placeholder="Add a reply&hellip;" autocomplete="off">
+                      <input class="reply-input" type="text" maxlength="500" placeholder="Add a reply" autocomplete="off" aria-label="Reply">
                       <button class="chip reply-send" type="submit">Send</button>
                     </form>
                   </div>
                 </li>
               <% }) %>
             </ul>
-          <div class="add-comment" data-submission="<%= s.id %>" data-round="<%= round.id %>">
-            <button class="comment-toggle" type="button">&#43; Leave a comment</button>
-            <form class="comment-form" hidden>
-              <input class="comment-input" type="text" maxlength="500" placeholder="Add a comment…" autocomplete="off">
-              <button class="chip comment-send" type="submit">Send</button>
-            </form>
-          </div>
 
+            <div class="add-comment" data-submission="<%= s.id %>" data-round="<%= round.id %>">
+              <button class="comment-toggle" type="button"><%= myComment ? 'Edit my comment' : '+ Leave a comment' %></button>
+              <form class="comment-form" hidden>
+                <input class="comment-input" type="text" maxlength="500" placeholder="Add a comment" autocomplete="off" aria-label="Comment" value="<%= myComment ? myComment.body : '' %>">
+                <button class="chip comment-send" type="submit">Send</button>
+              </form>
+            </div>
+          </div>
         </li>
       <% }) %>
     </ol>
-
-    <div class="takeaway">
-      <h2 class="rack__heading">Take it with you</h2>
-      <p class="moves">
-        <a class="chip" href="/round/<%= round.id %>/youtube" target="_blank" rel="noopener">YouTube playlist</a>
-        <a class="chip" href="/round/<%= round.id %>/export.txt">Text list</a>
-        <a class="chip" href="/round/<%= round.id %>/export.csv">CSV</a>
-        <a class="chip" href="/round/<%= round.id %>/export.m3u">M3U</a>
-      </p>
-      <p class="fineprint">
-        The YouTube link opens every song in this round as one playlist.
-      </p>
-    </div>
 
     <p class="fineprint">
       Comments were anonymous during voting. Authors and replies are visible here.
@@ -157,81 +154,73 @@
 
 <script>
 (function () {
+  'use strict';
+
   function esc(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function wireReplyThread(thread) {
+  // ---- Open and close a song's comments --------------------------
+  function setOpen(li, open) {
+    var btn = li.querySelector('.result__more');
+    var extra = li.querySelector('.result__extra');
+    if (!btn || !extra) return;
+    extra.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    li.classList.toggle('is-open', open);
+  }
 
-    var toggle    = thread.querySelector('.reply-toggle');
-    var form      = thread.querySelector('.reply-form');
-    var input     = thread.querySelector('.reply-input');
-    var commentId = thread.dataset.comment;
-    var roundId   = thread.dataset.round;
-
-    toggle.addEventListener('click', function () {
-      form.hidden = !form.hidden;
-      if (!form.hidden) { input.focus(); }
-    }
-
-    form.addEventListener('submit', async function (e) {
-      e.preventDefault();
-      var body = input.value.trim();
-      if (!body) return;
-      toggle.disabled = true;
-
-      try {
-        var res  = await fetch('/round/' + roundId + '/reply', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ comment_id: commentId, body: body }),
-        });
-        var data = await res.json();
-        if (!data.ok) { alert(data.error); return; }
-
-        var li   = thread.closest('.chatter__line');
-        var list = li.querySelector('.chatter--replies');
-        if (!list) {
-          list = document.createElement('ul');
-          list.className = 'chatter chatter--replies';
-          li.insertBefore(list, thread);
-        }
-        var item = document.createElement('li');
-        item.className       = 'chatter__line chatter__line--reply';
-        item.dataset.replyId = data.reply.id;
-        item.innerHTML =
-          '<span class="chatter__who">'  + esc(data.reply.author) + '</span>' +
-          '<span class="chatter__body">' + esc(data.reply.body)   + '</span>';
-        list.appendChild(item);
-
-        input.value = '';
-        form.hidden = true;
-      } catch (err) {
-        alert('Could not post reply. Try again.');
-      } finally {
-        toggle.disabled = false;
-      }
+  document.querySelectorAll('.result--row').forEach(function (li) {
+    var btn = li.querySelector('.result__more');
+    btn.addEventListener('click', function () {
+      setOpen(li, btn.getAttribute('aria-expanded') !== 'true');
     });
   });
-  }
-  document.querySelectorAll('.reply-thread').forEach(wireReplyThread);
-}());
 
-  // ── escHtml helper (safe to define even if it already exists elsewhere) ───
-  if (typeof escHtml === 'undefined') {
-    function escHtml(s) {
-      return String(s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  if (/^#song-\d+$/.test(location.hash)) {
+    var target = document.querySelector(location.hash);
+    if (target) {
+      setOpen(target, true);
+      target.scrollIntoView({ block: 'center' });
     }
   }
 
-  // ── top-level comment forms ───────────────────────────────────────────────
-  document.querySelectorAll('.add-comment').forEach(function (widget) {
-    var toggle = widget.querySelector('.comment-toggle');
-    var form   = widget.querySelector('.comment-form');
-    var input  = widget.querySelector('.comment-input');
+  var all = document.querySelector('.results__expand');
+  if (all) {
+    all.addEventListener('click', function () {
+      var open = all.getAttribute('aria-pressed') !== 'true';
+      all.setAttribute('aria-pressed', open ? 'true' : 'false');
+      all.textContent = open ? 'Close all comments' : 'Open all comments';
+      document.querySelectorAll('.result--row').forEach(function (li) { setOpen(li, open); });
+    });
+  }
+
+  function bump(li, by) {
+    var n = li.querySelector('.result__talk');
+    if (n) n.textContent = String((parseInt(n.textContent, 10) || 0) + by);
+  }
+
+  async function post(url, payload) {
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    var data = null;
+    try { data = await res.json(); } catch (e) { data = null; }
+    if (!res.ok || !data || data.ok === false) {
+      throw new Error((data && data.error) || 'Could not post that. Try again.');
+    }
+    return data;
+  }
+
+  // ---- Replies ----------------------------------------------------
+  function wireReplyThread(thread) {
+    var toggle = thread.querySelector('.reply-toggle');
+    var form = thread.querySelector('.reply-form');
+    var input = thread.querySelector('.reply-input');
 
     toggle.addEventListener('click', function () {
       form.hidden = !form.hidden;
@@ -242,60 +231,71 @@
       e.preventDefault();
       var body = input.value.trim();
       if (!body) return;
-      var submissionId = widget.dataset.submission;
-      var roundId      = widget.dataset.round;
-
-      var btn = form.querySelector('.comment-send');
-      btn.disabled = true;
-
+      var send = form.querySelector('.reply-send');
+      send.disabled = true;
       try {
-        var resp = await fetch('/round/' + roundId + '/comment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ submission_id: submissionId, body: body })
-        });
-        var data = await resp.json();
-        if (!resp.ok) { alert(data.error || 'Error posting comment.'); return; }
-
-        // Find (or create) the chatter list for this song
-        var song   = widget.closest('.song, .result-song, [data-song-id]') || widget.parentElement;
-        var ul     = song.querySelector('.chatter');
-        if (!ul) {
-          ul = document.createElement('ul');
-          ul.className = 'chatter';
-          widget.parentElement.insertBefore(ul, widget);
+        var data = await post('/round/' + thread.dataset.round + '/reply',
+          { comment_id: thread.dataset.comment, body: body });
+        var line = thread.closest('.chatter__line');
+        var list = line.querySelector('.chatter--replies');
+        if (!list) {
+          list = document.createElement('ul');
+          list.className = 'chatter chatter--replies';
+          line.insertBefore(list, thread);
         }
-
-        var li = document.createElement('li');
-        li.className = 'chatter__line';
-        li.dataset.commentId = data.comment.id;
-        li.innerHTML =
-          '<div class="chatter__top">' +
-            '<span class="chatter__who">' + escHtml(data.comment.author) + '</span>' +
-            '<span class="chatter__body">' + escHtml(data.comment.body) + '</span>' +
-          '</div>' +
-          '<div class="reply-thread" data-comment="' + data.comment.id + '" data-round="' + roundId + '">' +
-            '<button class="reply-toggle" type="button">&#8629; Reply</button>' +
-            '<form class="reply-form" hidden>' +
-              '<input class="reply-input" type="text" maxlength="500" placeholder="Add a reply…" autocomplete="off">' +
-              '<button class="chip reply-send" type="submit">Send</button>' +
-            '</form>' +
-          '</div>';
-        ul.appendChild(li);
-
-        // Wire up reply thread if the helper exists (defined by step 4 refactor)
-        var newThread = li.querySelector('.reply-thread');
-        if (newThread && typeof wireReplyThread === 'function') {
-          wireReplyThread(newThread);
-        }
-
+        var item = document.createElement('li');
+        item.className = 'chatter__line chatter__line--reply';
+        item.dataset.replyId = data.reply.id;
+        item.innerHTML =
+          '<span class="chatter__who">' + esc(data.reply.author) + '</span>' +
+          '<span class="chatter__body">' + esc(data.reply.body) + '</span>';
+        list.appendChild(item);
+        bump(thread.closest('.result--row'), 1);
         input.value = '';
         form.hidden = true;
+      } catch (err) {
+        alert(err.message);
       } finally {
-        btn.disabled = false;
+        send.disabled = false;
+      }
+    });
+  }
+
+  document.querySelectorAll('.reply-thread').forEach(wireReplyThread);
+
+  // ---- New comments -----------------------------------------------
+  document.querySelectorAll('.add-comment').forEach(function (widget) {
+    var toggle = widget.querySelector('.comment-toggle');
+    var form = widget.querySelector('.comment-form');
+    var input = widget.querySelector('.comment-input');
+
+    toggle.addEventListener('click', function () {
+      form.hidden = !form.hidden;
+      if (!form.hidden) input.focus();
+    });
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var body = input.value.trim();
+      if (!body) return;
+      var send = form.querySelector('.comment-send');
+      send.disabled = true;
+      try {
+        await post('/round/' + widget.dataset.round + '/comment',
+          { submission_id: widget.dataset.submission, body: body });
+        // One comment per person per song: posting again replaces yours.
+        // Reload so the thread shows exactly what was saved, with its
+        // reply box wired up, and reopen this song.
+        var li = widget.closest('.result--row');
+        location.hash = li.id;
+        location.reload();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        send.disabled = false;
       }
     });
   });
-
+}());
 </script>
 <%- include('partials/foot') %>

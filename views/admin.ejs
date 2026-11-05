@@ -1,13 +1,20 @@
 <%- include('partials/head', { title: 'Commissioner - Holy Hinder Hole Sound Society' }) %>
+<%
+  var live = rounds.filter(function (r) { return r.status === 'submitting' || r.status === 'voting'; });
+  var nextUp = rounds.filter(function (r) { return r.status === 'draft'; })[0] || null;
+  var stateWord = { draft: 'Not open', submitting: 'Taking songs', voting: 'Voting', revealed: 'Revealed' };
+%>
 
-  <header class="bar">
-    <a class="bar__back" href="/">Player view</a>
-    <span class="bar__name"><%= player.name %></span>
-  </header>
-
-  <header class="marquee marquee--small">
-    <p class="marquee__eyebrow">Commissioner</p>
-    <h1 class="marquee__title"><span><%= league.name %></span></h1>
+  <header class="pagehead pagehead--split">
+    <div>
+      <p class="pagehead__crumbs">Commissioner</p>
+      <h1 class="pagehead__title"><%= league.name %></h1>
+    </div>
+    <dl class="pagehead__facts">
+      <div><dt>Roster</dt><dd><%= roster.length %></dd></div>
+      <div><dt>Paid</dt><dd><%= paidCount %>/<%= roster.length %></dd></div>
+      <div><dt>Pot</dt><dd>$<%= (paidCount * league.buy_in_cents / 100).toFixed(0) %></dd></div>
+    </dl>
   </header>
 
   <main class="panel">
@@ -15,166 +22,331 @@
     <% if (error) { %><p class="notice notice--bad"><%= error %></p><% } %>
     <% if (notice) { %><p class="notice notice--good"><%= notice %></p><% } %>
 
-    <dl class="facts">
-      <div class="facts__row">
-        <dt>Roster</dt>
-        <dd><%= roster.length %> players</dd>
-      </div>
-      <div class="facts__row">
-        <dt>Paid up</dt>
-        <dd><%= paidCount %> of <%= roster.length %></dd>
-      </div>
-      <div class="facts__row">
-        <dt>Pot</dt>
-        <dd>$<%= (paidCount * league.buy_in_cents / 100).toFixed(0) %> collected</dd>
-      </div>
-    </dl>
+    <nav class="tabs" role="tablist" aria-label="Commissioner sections" data-tabs>
+      <a class="tabs__tab" role="tab" href="#overview" data-tab="overview">Overview</a>
+      <a class="tabs__tab" role="tab" href="#rounds" data-tab="rounds">Rounds</a>
+      <a class="tabs__tab" role="tab" href="#roster" data-tab="roster">Roster</a>
+      <a class="tabs__tab" role="tab" href="#settings" data-tab="settings">Invite and settings</a>
+      <a class="tabs__tab" role="tab" href="#activity" data-tab="activity">Activity</a>
+    </nav>
 
+    <!-- Overview -------------------------------------------------- -->
+    <section class="tabpanel" id="overview" role="tabpanel" data-panel="overview">
+      <% if (!live.length) { %>
+        <div class="strip strip--message"><p>No round is open right now.<% if (nextUp) { %> Round <%= nextUp.round_number %> is next.<% } %></p></div>
+      <% } %>
 
-    <h2 class="rack__heading">Invite link</h2>
-    <div class="invite">
-      <input class="invite__url" type="text" readonly
-             onclick="this.select()"
-             value="<%= appUrl %>/join/<%= league.invite_code %>">
-      <p class="fineprint">
-        Share this with the group. Anyone holding it can add themselves.
-        They still have to click a link sent to their own email, so nobody
-        can join as someone else. Rotating makes every old link dead.
-      </p>
-      <div class="moves">
-        <form method="post" action="/admin/invite/toggle">
-          <button class="chip <%= league.invites_open ? 'chip--on' : '' %>" type="submit">
-            <%= league.invites_open ? 'signups open' : 'signups closed' %>
-          </button>
-        </form>
-        <form method="post" action="/admin/auto/toggle">
-          <button class="chip <%= league.auto_advance ? 'chip--on' : '' %>" type="submit">
-            <%= league.auto_advance ? 'auto advance on' : 'auto advance off' %>
-          </button>
-        </form>
-        <form method="post" action="/admin/invite/rotate"
-              onsubmit="return confirm('Every existing invite link stops working. Continue?')">
-          <button class="chip" type="submit">new link</button>
-        </form>
-      </div>
-    </div>
+      <% live.forEach(function (r) { %>
+        <div class="ctl">
+          <div class="ctl__top">
+            <span class="ctl__code"><%= String(r.round_number).padStart(2, '0') %></span>
+            <div class="ctl__head">
+              <p class="ctl__state"><%= stateWord[r.status] %><% if (r.on_hold) { %> &middot; on hold<% } %></p>
+              <h2 class="ctl__title"><%= r.title %></h2>
+            </div>
+            <a class="chip ctl__sheet" href="/admin/round/<%= r.id %>">Round sheet</a>
+          </div>
 
-    <h2 class="rack__heading">Rounds</h2>
-    <ol class="rack">
-      <% rounds.forEach(function (r) { %>
-        <li class="strip strip--round strip--<%= r.status %>">
-          <span class="strip__code"><%= String(r.round_number).padStart(2, '0') %></span>
-          <div class="strip__body">
-            <h3 class="strip__title">
-              <a class="strip__deep" href="/admin/round/<%= r.id %>"><%= r.title %></a>
-            </h3>
-            <p class="strip__meta">
-              <%= r.submitted %> in &middot; songs <%= r.submitBy %>
-            </p>
-            <% if (r.moves.length) { %>
-              <p class="moves">
-                <% r.moves.forEach(function (m) { %>
-                  <form method="post" action="/admin/round/<%= r.id %>/status"
-                        <% if (m.confirm) { %>onsubmit="return confirm('<%= m.confirm %>')"<% } %>>
-                    <input type="hidden" name="status" value="<%= m.to %>">
-                    <button class="chip <%= m.to === 'revealed' ? 'chip--danger' : '' %>" type="submit"><%= m.label %></button>
-                  </form>
-                <% }) %>
-              </p>
+          <div class="ctl__stats">
+            <% if (r.status === 'submitting') { %>
+              <div><span class="ctl__big"><%= r.submitted %>/<%= roster.length %></span><span class="ctl__small">songs in</span></div>
+              <div><span class="ctl__big ctl__big--date"><%= r.submitBy %></span><span class="ctl__small">songs due</span></div>
+            <% } else { %>
+              <div><span class="ctl__big"><%= r.voted %>/<%= r.submitted %></span><span class="ctl__small">have voted</span></div>
+              <div><span class="ctl__big ctl__big--date"><%= r.voteBy %></span><span class="ctl__small">votes due</span></div>
             <% } %>
           </div>
-          <span class="strip__state"><%= r.status %><% if (r.on_hold) { %> &middot; held<% } %></span>
-        </li>
-      <% }) %>
-    </ol>
 
-    <h2 class="rack__heading">Roster</h2>
-    <table class="grid">
-      <thead>
-        <tr><th>Player</th><th>Songs</th><th>Dues</th><th>Role</th><th></th></tr>
-      </thead>
-      <tbody>
-        <% roster.forEach(function (p) { %>
-          <tr>
-            <td>
-              <span class="grid__name"><%= p.name %></span>
-              <span class="grid__sub"><%= p.email %></span>
-              <% if (!p.last_login_at) { %>
-                <span class="tag tag--late">never signed in</span>
+          <div class="ctl__moves">
+            <form class="ctl__extend" method="post" action="/admin/round/<%= r.id %>/extend">
+              <label class="ctl__field">
+                <span class="ctl__label">More time</span>
+                <select class="field__input" name="by">
+                  <% bumps.forEach(function (b) { %>
+                    <option value="<%= b.key %>" <%= b.key === '1d' ? 'selected' : '' %>>+<%= b.label %></option>
+                  <% }) %>
+                </select>
+              </label>
+              <% if (r.status === 'submitting') { %>
+                <input type="hidden" name="which" value="submit">
+                <input type="hidden" name="shift" value="1">
+              <% } else { %>
+                <input type="hidden" name="which" value="vote">
               <% } %>
-            </td>
-            <td class="grid__num"><%= p.songs_in %></td>
-            <td>
-              <form method="post" action="/admin/roster/<%= p.player_id %>/dues">
-                <button class="chip <%= p.dues_paid_at ? 'chip--on' : '' %>" type="submit">
-                  <%= p.dues_paid_at ? 'paid' : 'unpaid' %>
-                </button>
-              </form>
-            </td>
-            <td>
-              <form method="post" action="/admin/roster/<%= p.player_id %>/role">
-                <input type="hidden" name="role" value="<%= p.role === 'admin' ? 'player' : 'admin' %>">
-                <button class="chip <%= p.role === 'admin' ? 'chip--on' : '' %>" type="submit">
-                  <%= p.role %>
-                </button>
-              </form>
-            </td>
-            <td>
-              <form method="post" action="/admin/roster/<%= p.player_id %>/remove"
-                    onsubmit="return confirm('Remove <%= p.name %> from the roster? Their submissions go too.')">
-                <button class="chip chip--danger" type="submit">remove</button>
-              </form>
-            </td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
+              <button class="chip" type="submit">Extend <%= r.status === 'submitting' ? 'songs' : 'voting' %></button>
+            </form>
 
-    <p class="moves">
-      <form method="post" action="/admin/roster/welcome-all"
-            onsubmit="return confirm('Email a sign in link to everyone who has not signed in yet?')">
-        <button class="chip" type="submit">email everyone who has not signed in</button>
-      </form>
-      <form method="post" action="/admin/roster/welcome-all"
-            onsubmit="return confirm('Email a fresh sign in link to the WHOLE roster, including people already signed in?')">
-        <input type="hidden" name="everyone" value="1">
-        <button class="chip chip--danger" type="submit">email the whole roster</button>
-      </form>
-    </p>
-    <p class="fineprint">
-      Sends each person a link that signs them straight in. Links work once
-      and expire in 20 minutes, so send these when people are around.
-    </p>
+            <span class="ctl__gap"></span>
 
-    <details class="drawer">
-      <summary class="drawer__summary">Add players</summary>
-      <form class="strip strip--form" method="post" action="/admin/roster/add">
-        <label class="field">
-          <span class="field__label">One per line: name, then a comma, then email</span>
-          <textarea class="field__input field__input--area" name="bulk" rows="6"
-                    placeholder="Matthew Reuter, reutermatthew3@gmail.com"></textarea>
-        </label>
-        <button class="button" type="submit">Add to roster</button>
-      </form>
-      <p class="fineprint">
-        Adding someone does not email them. Send them the link to
-        hinderhole.com and they sign themselves in.
-      </p>
-    </details>
+            <% r.moves.forEach(function (m) { %>
+              <form method="post" action="/admin/round/<%= r.id %>/status"
+                    <% if (m.confirm) { %>onsubmit="return confirm('<%= m.confirm %>')"<% } %>>
+                <input type="hidden" name="status" value="<%= m.to %>">
+                <button class="chip <%= m.to === 'revealed' ? 'chip--danger' : (m.to === 'voting' && r.status === 'submitting' ? 'chip--on' : '') %>" type="submit"><%= m.label %></button>
+              </form>
+            <% }) %>
+          </div>
+        </div>
+      <% }) %>
 
-    <% if (recent.length) { %>
-      <h2 class="rack__heading">Recent actions</h2>
-      <ul class="ledger">
-        <% recent.forEach(function (a) { %>
-          <li class="ledger__row">
-            <span class="ledger__when"><%= a.when %></span>
-            <span class="ledger__what"><%= a.detail || a.action %></span>
-            <span class="ledger__who"><%= a.actor %></span>
+      <div class="ovgrid">
+        <a class="ovcard" href="#roster" data-goto="roster">
+          <span class="ovcard__big"><%= roster.filter(function (p) { return !p.last_login_at; }).length %></span>
+          <span class="ovcard__small">never signed in</span>
+        </a>
+        <a class="ovcard" href="#roster" data-goto="roster">
+          <span class="ovcard__big"><%= roster.length - paidCount %></span>
+          <span class="ovcard__small">still owe dues</span>
+        </a>
+        <a class="ovcard" href="#settings" data-goto="settings">
+          <span class="ovcard__big ovcard__big--word"><%= league.auto_advance ? 'On' : 'Off' %></span>
+          <span class="ovcard__small">auto advance</span>
+        </a>
+        <a class="ovcard" href="#settings" data-goto="settings">
+          <span class="ovcard__big ovcard__big--word"><%= league.invites_open ? 'Open' : 'Closed' %></span>
+          <span class="ovcard__small">signups</span>
+        </a>
+      </div>
+
+      <% if (recent.length) { %>
+        <h2 class="rack__heading">Latest</h2>
+        <ul class="ledger">
+          <% recent.slice(0, 4).forEach(function (a) { %>
+            <li class="ledger__row">
+              <span class="ledger__when"><%= a.when %></span>
+              <span class="ledger__what"><%= a.detail || a.action %></span>
+              <span class="ledger__who"><%= a.actor %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </section>
+
+    <!-- Rounds ---------------------------------------------------- -->
+    <section class="tabpanel" id="rounds" role="tabpanel" data-panel="rounds">
+      <ol class="rack">
+        <% rounds.forEach(function (r) { %>
+          <li class="strip strip--round strip--<%= r.status %> strip--admin">
+            <span class="strip__code"><%= String(r.round_number).padStart(2, '0') %></span>
+            <div class="strip__body">
+              <h3 class="strip__title">
+                <a class="strip__deep" href="/admin/round/<%= r.id %>"><%= r.title %></a>
+              </h3>
+              <p class="strip__meta">
+                <%= r.submitted %> in &middot; songs <%= r.submitBy %>
+                <% if (r.status === 'voting' || r.status === 'revealed') { %> &middot; <%= r.voted %> voted<% } %>
+              </p>
+            </div>
+            <span class="strip__state"><%= stateWord[r.status] %><% if (r.on_hold) { %> &middot; held<% } %></span>
+            <% if (r.moves.length) { %>
+              <details class="dd dd--right dd--inline strip__more">
+                <summary class="strip__morebtn" aria-label="More for round <%= r.round_number %>">
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="13" cy="8" r="1.5" fill="currentColor"/></svg>
+                </summary>
+                <div class="dd__panel dd__panel--narrow">
+                  <a class="dd__item" href="/admin/round/<%= r.id %>"><span class="dd__label">Open round sheet</span></a>
+                  <% r.moves.forEach(function (m) { %>
+                    <form class="dd__form" method="post" action="/admin/round/<%= r.id %>/status"
+                          <% if (m.confirm) { %>onsubmit="return confirm('<%= m.confirm %>')"<% } %>>
+                      <input type="hidden" name="status" value="<%= m.to %>">
+                      <button class="dd__item <%= (m.to === 'revealed' || r.status === 'revealed') ? 'dd__item--out' : '' %>" type="submit"><span class="dd__label"><%= m.label %></span></button>
+                    </form>
+                  <% }) %>
+                </div>
+              </details>
+            <% } %>
           </li>
         <% }) %>
-      </ul>
-    <% } %>
+      </ol>
+    </section>
+
+    <!-- Roster ---------------------------------------------------- -->
+    <section class="tabpanel" id="roster" role="tabpanel" data-panel="roster">
+      <div class="tablewrap">
+        <table class="grid">
+          <thead>
+            <tr><th>Player</th><th>Songs</th><th>Dues</th><th>Role</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% roster.forEach(function (p) { %>
+              <tr>
+                <td>
+                  <span class="grid__name"><%= p.name %></span>
+                  <span class="grid__sub"><%= p.email %></span>
+                  <% if (!p.last_login_at) { %>
+                    <span class="tag tag--late">never signed in</span>
+                  <% } %>
+                </td>
+                <td class="grid__num"><%= p.songs_in %></td>
+                <td>
+                  <form method="post" action="/admin/roster/<%= p.player_id %>/dues">
+                    <button class="chip <%= p.dues_paid_at ? 'chip--on' : '' %>" type="submit">
+                      <%= p.dues_paid_at ? 'paid' : 'unpaid' %>
+                    </button>
+                  </form>
+                </td>
+                <td>
+                  <form method="post" action="/admin/roster/<%= p.player_id %>/role">
+                    <input type="hidden" name="role" value="<%= p.role === 'admin' ? 'player' : 'admin' %>">
+                    <button class="chip <%= p.role === 'admin' ? 'chip--on' : '' %>" type="submit">
+                      <%= p.role %>
+                    </button>
+                  </form>
+                </td>
+                <td>
+                  <details class="dd dd--right dd--inline">
+                    <summary class="strip__morebtn" aria-label="More for <%= p.name %>">
+                      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="13" cy="8" r="1.5" fill="currentColor"/></svg>
+                    </summary>
+                    <div class="dd__panel dd__panel--narrow">
+                      <form class="dd__form" method="post" action="/admin/roster/<%= p.player_id %>/remove"
+                            onsubmit="return confirm('Remove <%= p.name %> from the roster? Their submissions go too.')">
+                        <button class="dd__item dd__item--out" type="submit"><span class="dd__label">Remove from league</span></button>
+                      </form>
+                    </div>
+                  </details>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <details class="drawer">
+        <summary class="drawer__summary">Email sign in links</summary>
+        <p class="moves">
+          <form method="post" action="/admin/roster/welcome-all"
+                onsubmit="return confirm('Email a sign in link to everyone who has not signed in yet?')">
+            <button class="chip" type="submit">email everyone who has not signed in</button>
+          </form>
+          <form method="post" action="/admin/roster/welcome-all"
+                onsubmit="return confirm('Email a fresh sign in link to the WHOLE roster, including people already signed in?')">
+            <input type="hidden" name="everyone" value="1">
+            <button class="chip chip--danger" type="submit">email the whole roster</button>
+          </form>
+        </p>
+        <p class="fineprint">
+          Sends each person a link that signs them straight in. Links work once
+          and expire in 20 minutes, so send these when people are around.
+        </p>
+      </details>
+
+      <details class="drawer">
+        <summary class="drawer__summary">Add players</summary>
+        <form class="strip strip--form" method="post" action="/admin/roster/add">
+          <label class="field">
+            <span class="field__label">One per line: name, then a comma, then email</span>
+            <textarea class="field__input field__input--area" name="bulk" rows="6"
+                      placeholder="Matthew Reuter, reutermatthew3@gmail.com"></textarea>
+          </label>
+          <button class="button" type="submit">Add to roster</button>
+        </form>
+        <p class="fineprint">
+          Adding someone does not email them. Send them the link to
+          hinderhole.com and they sign themselves in.
+        </p>
+      </details>
+    </section>
+
+    <!-- Settings -------------------------------------------------- -->
+    <section class="tabpanel" id="settings" role="tabpanel" data-panel="settings">
+      <h2 class="rack__heading">Invite link</h2>
+      <div class="invite">
+        <input class="invite__url" type="text" readonly
+               onclick="this.select()" aria-label="Invite link"
+               value="<%= appUrl %>/join/<%= league.invite_code %>">
+        <p class="fineprint">
+          Share this with the group. Anyone holding it can add themselves.
+          They still have to click a link sent to their own email, so nobody
+          can join as someone else. Rotating makes every old link dead.
+        </p>
+      </div>
+
+      <div class="settings">
+        <form class="setting" method="post" action="/admin/invite/toggle">
+          <span class="setting__text">
+            <span class="setting__name">Signups</span>
+            <span class="setting__sub">Whether the invite link lets new people in</span>
+          </span>
+          <button class="chip <%= league.invites_open ? 'chip--on' : '' %>" type="submit">
+            <%= league.invites_open ? 'open' : 'closed' %>
+          </button>
+        </form>
+        <form class="setting" method="post" action="/admin/auto/toggle">
+          <span class="setting__text">
+            <span class="setting__name">Auto advance</span>
+            <span class="setting__sub">Rounds move on by themselves at each deadline</span>
+          </span>
+          <button class="chip <%= league.auto_advance ? 'chip--on' : '' %>" type="submit">
+            <%= league.auto_advance ? 'on' : 'off' %>
+          </button>
+        </form>
+        <form class="setting" method="post" action="/admin/invite/rotate"
+              onsubmit="return confirm('Every existing invite link stops working. Continue?')">
+          <span class="setting__text">
+            <span class="setting__name">New invite link</span>
+            <span class="setting__sub">Kills every link already sent</span>
+          </span>
+          <button class="chip chip--danger" type="submit">rotate</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Activity -------------------------------------------------- -->
+    <section class="tabpanel" id="activity" role="tabpanel" data-panel="activity">
+      <% if (recent.length) { %>
+        <ul class="ledger">
+          <% recent.forEach(function (a) { %>
+            <li class="ledger__row">
+              <span class="ledger__when"><%= a.when %></span>
+              <span class="ledger__what"><%= a.detail || a.action %></span>
+              <span class="ledger__who"><%= a.actor %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p class="fineprint">Nothing yet.</p>
+      <% } %>
+    </section>
 
   </main>
 
+<script>
+(function () {
+  var bar = document.querySelector('[data-tabs]');
+  if (!bar) return;
+  var tabs = bar.querySelectorAll('[data-tab]');
+  var panels = document.querySelectorAll('[data-panel]');
+  var KEY = 'hh.adminTab';
+
+  function show(name, push) {
+    var found = false;
+    panels.forEach(function (p) {
+      var on = p.getAttribute('data-panel') === name;
+      p.hidden = !on;
+      if (on) found = true;
+    });
+    if (!found) return show('overview', push);
+    tabs.forEach(function (t) {
+      var on = t.getAttribute('data-tab') === name;
+      t.classList.toggle('is-on', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    try { sessionStorage.setItem(KEY, name); } catch (e) { /* private mode */ }
+    if (push && history.replaceState) history.replaceState(null, '', '#' + name);
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest('[data-tab], [data-goto]');
+    if (!t) return;
+    e.preventDefault();
+    show(t.getAttribute('data-tab') || t.getAttribute('data-goto'), true);
+    window.scrollTo(0, 0);
+  });
+
+  var start = (location.hash || '').slice(1);
+  if (!start) { try { start = sessionStorage.getItem(KEY) || ''; } catch (e) { start = ''; } }
+  show(start || 'overview', false);
+}());
+</script>
 <%- include('partials/foot') %>

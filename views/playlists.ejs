@@ -1,0 +1,141 @@
+<%- include('partials/head', { title: 'Playlists - Holy Hinder Hole Sound Society' }) %>
+
+  <header class="pagehead pagehead--split">
+    <div>
+      <p class="pagehead__crumbs"><%= league.name %> &middot; season's end</p>
+      <h1 class="pagehead__title">Playlists</h1>
+    </div>
+    <nav class="segment" aria-label="Playlist view">
+      <a class="segment__item<%= view === 'player' ? ' is-on' : '' %>" href="/playlists" <%= view === 'player' ? 'aria-current=page' : '' %>>By player</a>
+      <a class="segment__item<%= view === 'mixtape' ? ' is-on' : '' %>" href="/playlists/mixtape" <%= view === 'mixtape' ? 'aria-current=page' : '' %>>Round winners mixtape</a>
+    </nav>
+  </header>
+
+  <main class="panel">
+
+  <% if (view === 'player') { %>
+    <div class="plist">
+      <div class="plist__people">
+        <label class="plist__pick">
+          <span class="plist__picklabel">Whose playlist</span>
+          <select class="field__input" onchange="if (this.value) location.href = '/playlists/' + this.value">
+            <% roster.forEach(function (p) { %>
+              <option value="<%= p.id %>" <%= p.on ? 'selected' : '' %>><%= p.place %>. <%= p.name %> (<%= p.points %>)</option>
+            <% }) %>
+          </select>
+        </label>
+        <ul class="plist__list">
+          <% roster.forEach(function (p) { %>
+            <li>
+              <a class="plist__person<%= p.on ? ' is-on' : '' %>" href="/playlists/<%= p.id %>" <%= p.on ? 'aria-current=page' : '' %>>
+                <span class="plist__place"><%= p.place %></span>
+                <span class="plist__name"><%= p.name %></span>
+                <span class="plist__pts"><%= p.points %></span>
+              </a>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+
+      <section class="plist__main">
+        <div class="phead">
+          <div class="phead__art" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <div class="phead__body">
+            <p class="phead__eyebrow"><%= ordinal(person.place) %> in the standings &middot; <%= person.points %> pts</p>
+            <h2 class="phead__title"><%= isMe ? 'My season' : person.name + "'s season" %></h2>
+            <p class="phead__sub">
+              <%= scoredCount %> pick<%= scoredCount === 1 ? '' : 's' %> scored
+              <% if (wins.length) { %>
+                &middot; took <%= wins.map(function (w) { return 'Round ' + String(w.round.round_number).padStart(2, '0'); }).join(' and ') %>
+              <% } else if (best) { %>
+                &middot; best: <%= best.sub.title %>, <%= best.place %> in Round <%= String(best.round.round_number).padStart(2, '0') %>
+              <% } %>
+            </p>
+          </div>
+          <div class="phead__moves">
+            <button class="queuebar__toggle phead__play" type="button">Play all</button>
+            <% if (ytCount) { %>
+              <a class="chip" href="/playlists/<%= person.id %>/youtube" target="_blank" rel="noopener">Open as YouTube playlist</a>
+            <% } %>
+            <span class="queuebar__status"></span>
+          </div>
+        </div>
+
+        <ol class="tracks">
+          <% picks.forEach(function (t) { %>
+            <li class="track track--<%= t.state %><%= t.won ? ' track--won' : '' %>">
+              <span class="track__code"><%= String(t.round.round_number).padStart(2, '0') %><span class="track__rnd">Rnd</span></span>
+              <div class="track__media">
+                <% if (t.sub) { %><%- include('partials/player', { sub: t.sub }) %><% } %>
+              </div>
+              <div class="track__info">
+                <span class="track__theme"><%= t.round.title %></span>
+                <% if (t.state === 'scored' || t.state === 'mine') { %>
+                  <span class="track__title pick__title"><%= t.sub.title %></span>
+                  <span class="track__artist"><%= t.sub.artist || 'Unknown artist' %></span>
+                  <% if (t.sub.note) { %><span class="track__note">&ldquo;<%= t.sub.note %>&rdquo;</span><% } %>
+                  <% if (t.state === 'mine') { %><span class="track__note">Only you can see this until the round is revealed.</span><% } %>
+                <% } else if (t.state === 'hidden') { %>
+                  <span class="track__title">Hidden until reveal</span>
+                  <span class="track__artist">Picks for a live round stay secret</span>
+                <% } else if (t.state === 'missed') { %>
+                  <span class="track__title">No song this round</span>
+                <% } else { %>
+                  <span class="track__title">Not played yet</span>
+                <% } %>
+              </div>
+              <span class="track__badge">
+                <% if (t.state === 'scored') { %><%= t.place %><% } else if (t.state === 'mine') { %>In play<% } else if (t.state === 'hidden') { %>Hidden<% } else { %>&nbsp;<% } %>
+              </span>
+              <span class="track__pts"><%= t.points !== null ? t.points : '' %></span>
+            </li>
+          <% }) %>
+        </ol>
+      </section>
+    </div>
+
+  <% } else { %>
+
+    <section class="mixtape">
+      <div class="mixtape__head">
+        <div>
+          <p class="mixtape__eyebrow">Every song that took a round</p>
+          <h2 class="mixtape__title">The Hinder Hole Mixtape</h2>
+        </div>
+        <div class="phead__moves">
+          <button class="queuebar__toggle mixtape__play" type="button">Play the mixtape</button>
+          <% if (ytCount) { %>
+            <a class="chip" href="/playlists/mixtape/youtube" target="_blank" rel="noopener">Open as YouTube playlist</a>
+          <% } %>
+          <span class="queuebar__status"></span>
+        </div>
+      </div>
+
+      <ol class="tracks">
+        <% winners.forEach(function (w) { %>
+          <li class="track track--<%= w.sub ? 'scored' : 'later' %>">
+            <span class="track__code"><%= String(w.round.round_number).padStart(2, '0') %><span class="track__rnd">Rnd</span></span>
+            <div class="track__media">
+              <% if (w.sub) { %><%- include('partials/player', { sub: w.sub }) %><% } %>
+            </div>
+            <div class="track__info">
+              <span class="track__theme"><%= w.round.title %></span>
+              <% if (w.sub) { %>
+                <span class="track__title pick__title"><%= w.sub.title %></span>
+                <span class="track__artist"><%= w.sub.artist || 'Unknown artist' %> &middot; <%= w.sub.submitter %></span>
+              <% } else { %>
+                <span class="track__title"><%= w.round.status === 'draft' ? 'Not played yet' : 'Added when results go up' %></span>
+              <% } %>
+            </div>
+            <span class="track__badge"><%= w.sub ? '1st' : '' %></span>
+            <span class="track__pts"><%= w.sub ? w.points : '' %></span>
+          </li>
+        <% }) %>
+      </ol>
+    </section>
+
+  <% } %>
+
+  </main>
+
+<%- include('partials/foot') %>

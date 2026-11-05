@@ -1,0 +1,103 @@
+<%
+  /* The top bar. Rendered by partials/head on every signed-in page.
+     Dropdowns are <details>, so they open without JavaScript; the small
+     script at the bottom only closes them when you click elsewhere. */
+  var here = typeof navPath !== 'undefined' ? navPath : '';
+  var seasonPaths = ['/standings', '/stats', '/upcoming', '/categories'];
+  var inSeason = seasonPaths.indexOf(here) !== -1 ||
+                 here.indexOf('/playlists') === 0 ||
+                 here.indexOf('/round/') === 0;
+  var inMe = here === '/me';
+  var isAdminPage = here.indexOf('/admin') === 0;
+  var initial = (player.name || '?').trim().charAt(0).toUpperCase();
+%>
+<header class="topnav" data-topnav>
+  <div class="topnav__inner">
+    <a class="topnav__brand" href="/">
+      <span class="topnav__word">Hinder Hole</span>
+      <span class="topnav__sub">Sound Society</span>
+    </a>
+
+    <button class="topnav__burger" type="button" aria-expanded="false"
+            aria-controls="topnav-menu" aria-label="Menu">
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+        <path class="topnav__burger-open" d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.8" fill="none"/>
+        <path class="topnav__burger-close" d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" fill="none"/>
+      </svg>
+    </button>
+
+    <nav class="topnav__menu" id="topnav-menu" aria-label="Main">
+      <a class="topnav__link<%= here === '/' ? ' is-here' : '' %>" href="/">This week</a>
+
+      <details class="dd">
+        <summary class="topnav__link<%= inSeason ? ' is-here' : '' %>">
+          Season
+          <svg class="dd__chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        </summary>
+        <div class="dd__panel">
+          <a class="dd__item" href="/#rounds"><span class="dd__label">Rounds</span><span class="dd__sub">All ten, with results</span></a>
+          <a class="dd__item" href="/upcoming"><span class="dd__label">Coming up</span><span class="dd__sub">Themes ahead and your shortlist</span></a>
+          <a class="dd__item" href="/standings"><span class="dd__label">Standings</span><span class="dd__sub">Points, payouts, CSV</span></a>
+          <a class="dd__item dd__item--new" href="/playlists"><span class="dd__label">Playlists <span class="dd__new">New</span></span><span class="dd__sub">Every player's season picks</span></a>
+          <a class="dd__item" href="/stats"><span class="dd__label">Stats</span><span class="dd__sub">Who votes for who</span></a>
+          <a class="dd__item" href="/categories"><span class="dd__label">Categories</span><span class="dd__sub">Suggest a theme</span></a>
+        </div>
+      </details>
+
+      <a class="topnav__link<%= here === '/chat' ? ' is-here' : '' %>" href="/chat">Chat</a>
+
+      <span class="topnav__spacer"></span>
+
+      <% if (typeof navAdmin !== 'undefined' && navAdmin) { %>
+        <a class="topnav__admin<%= isAdminPage ? ' is-here' : '' %>" href="/admin">Commissioner</a>
+      <% } %>
+
+      <details class="dd dd--right">
+        <summary class="topnav__me<%= inMe ? ' is-here' : '' %>">
+          <span class="topnav__avatar" aria-hidden="true"><%= initial %></span>
+          <span class="topnav__myname"><%= player.name %></span>
+          <svg class="dd__chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        </summary>
+        <div class="dd__panel dd__panel--narrow">
+          <a class="dd__item" href="/me"><span class="dd__label">My picks</span></a>
+          <a class="dd__item" href="/playlists/<%= player.id %>"><span class="dd__label">My playlist</span></a>
+          <a class="dd__item" href="/upcoming"><span class="dd__label">My shortlist</span></a>
+          <a class="dd__item" href="/me#name"><span class="dd__label">Change my name</span></a>
+          <form class="dd__form" method="post" action="/auth/logout">
+            <button class="dd__item dd__item--out" type="submit"><span class="dd__label">Sign out</span></button>
+          </form>
+        </div>
+      </details>
+    </nav>
+  </div>
+</header>
+<script>
+(function () {
+  var bar = document.querySelector('[data-topnav]');
+  if (!bar) return;
+  var burger = bar.querySelector('.topnav__burger');
+  var drops = bar.querySelectorAll('details.dd');
+
+  burger.addEventListener('click', function () {
+    var open = bar.classList.toggle('is-open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  drops.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (!d.open) return;
+      drops.forEach(function (o) { if (o !== d) o.open = false; });
+    });
+  });
+
+  document.addEventListener('click', function (e) {
+    if (bar.contains(e.target)) return;
+    drops.forEach(function (d) { d.open = false; });
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    drops.forEach(function (d) { d.open = false; });
+  });
+}());
+</script>

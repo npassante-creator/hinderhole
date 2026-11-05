@@ -1,10 +1,5 @@
 <%- include('partials/head', { title: 'My picks - Holy Hinder Hole Sound Society' }) %>
 
-  <header class="bar">
-    <a class="bar__back" href="/">All rounds</a>
-    <a class="bar__back" href="/upcoming">Coming up</a>
-    <span class="bar__name"><%= player.name %></span>
-  </header>
 
   <header class="marquee marquee--small">
     <p class="marquee__eyebrow"><%= player.name %></p>
@@ -20,7 +15,7 @@
       <p class="notice notice--good"><%= notice %></p>
     <% } %>
 
-    <details class="drawer">
+    <details class="drawer" id="name">
       <summary class="drawer__summary">Change what people call you</summary>
       <form class="strip strip--form" method="post" action="/me/name">
         <label class="field">
@@ -148,4 +143,5 @@
 
   </main>
 
+<script>if (location.hash === '#name') { var d = document.getElementById('name'); if (d) d.open = true; }</script>
 <%- include('partials/foot') %>

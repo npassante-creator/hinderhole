@@ -11,4 +11,5 @@
 <link rel="stylesheet" href="/app.css?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : '1' %>">
 </head>
 <body>
-<div class="cabinet">
+<% if (typeof player !== 'undefined' && player && !(typeof nav !== 'undefined' && nav === false)) { %><%- include('nav') %><% } %>
+<div class="cabinet<%= (typeof wide !== 'undefined' && wide) ? ' cabinet--wide' : '' %>">
